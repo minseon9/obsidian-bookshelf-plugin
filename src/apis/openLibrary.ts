@@ -1,5 +1,5 @@
 import { Book, createBookFromData } from '../models/book';
-import { HttpClient } from '../utils/httpClient';
+import { HttpClient } from '../utils/httpClientUtils';
 import {
 	OpenLibrarySearchResponse,
 	OpenLibrarySearchDoc,
