@@ -5,6 +5,7 @@ import {
 	OpenLibrarySearchDoc,
 	OpenLibraryWork,
 	OpenLibraryEdition,
+	OpenLibraryEditionsResponse,
 } from './types';
 
 /**
@@ -52,7 +53,7 @@ export class OpenLibraryClient {
 				// Try to get the first edition (ignore errors)
 				const editionsUrl = `${this.baseUrl}${work.key}/editions.json`;
 				try {
-					const editionsData = await this.httpClient.get<{ entries: OpenLibraryEdition[] }>(editionsUrl);
+					const editionsData = await this.httpClient.get<OpenLibraryEditionsResponse>(editionsUrl);
 					if (editionsData.entries && editionsData.entries.length > 0 && editionsData.entries[0]) {
 						edition = editionsData.entries[0];
 					}
@@ -134,7 +135,14 @@ export class OpenLibraryClient {
 	 * Convert Work to Book
 	 */
 	private convertWorkToBook(work: OpenLibraryWork, edition?: OpenLibraryEdition | null): Book {
-		const authors = work.authors?.map(a => a.name) || [];
+		// Extract author names
+		// Work API doesn't provide author names directly, only keys
+		// Edition API may provide author names, otherwise we'll have empty authors
+		const authors: string[] = [];
+		if (edition?.authors) {
+			authors.push(...edition.authors.map(a => a.name || '').filter(name => name.length > 0));
+		}
+		
 		const isbn10 = edition?.isbn_10?.[0] || work.isbn_10?.[0];
 		const isbn13 = edition?.isbn_13?.[0] || work.isbn_13?.[0];
 
