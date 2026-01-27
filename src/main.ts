@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, BookshelfSettings, BookshelfSettingTab } from "./sett
 import { registerCommands } from "./commands";
 import { FileManagerUtils } from "./utils/fileManagerUtils";
 import { BookshelfView } from "./views/bookshelfView";
+import { SearchModal } from "./views/searchModal";
 
 export default class BookshelfPlugin extends Plugin {
 	settings: BookshelfSettings;
@@ -32,6 +33,16 @@ export default class BookshelfPlugin extends Plugin {
 			callback: () => {
 				this.activateView();
 			},
+		});
+
+		// Add Ribbon icons (Left Navigation Bar)
+		this.addRibbonIcon('book-open', 'Open Bookshelf', () => {
+			this.activateView();
+		});
+
+		this.addRibbonIcon('plus-circle', 'Search and Add Book', () => {
+			const modal = new SearchModal(this.app, this);
+			modal.open();
 		});
 	}
 
