@@ -222,7 +222,7 @@ export class BookshelfView extends ItemView {
 			});
 		} else {
 			filteredBooks.forEach(({ book, file }) => {
-				const bookCard = new BookCard(this.app, book, file);
+				const bookCard = new BookCard(this.app, book, file, this.plugin);
 				const cardElement = bookCard.render(this.layout);
 				booksContainer.appendChild(cardElement);
 			});

@@ -1,5 +1,7 @@
 import { App, TFile } from 'obsidian';
 import { Book, BookStatus } from '../models/book';
+import BookshelfPlugin from '../main';
+import { ProgressUpdateModal } from './progressModal';
 
 /**
  * Book card component for rendering book items in Bookshelf View
@@ -8,11 +10,13 @@ export class BookCard {
 	private app: App;
 	private book: Book;
 	private file: TFile | null;
+	private plugin: BookshelfPlugin | null;
 
-	constructor(app: App, book: Book, file: TFile | null = null) {
+	constructor(app: App, book: Book, file: TFile | null = null, plugin?: BookshelfPlugin) {
 		this.app = app;
 		this.book = book;
 		this.file = file;
+		this.plugin = plugin || null;
 	}
 
 	/**
@@ -94,9 +98,31 @@ export class BookCard {
 			});
 		}
 
-		// Click handler
+		// Update progress button (for reading books)
+		if (this.plugin && this.file) {
+			const buttonContainer = infoContainer.createEl('div', {
+				cls: 'bookshelf-card-actions',
+			});
+
+			const updateButton = buttonContainer.createEl('button', {
+				cls: 'mod-cta',
+				text: 'Update Progress',
+			});
+
+			updateButton.addEventListener('click', (e) => {
+				e.stopPropagation(); // Prevent card click
+				const modal = new ProgressUpdateModal(this.app, this.plugin!, this.file!);
+				modal.open();
+			});
+		}
+
+		// Click handler (for opening note)
 		if (this.file) {
-			card.addEventListener('click', () => {
+			card.addEventListener('click', (e) => {
+				// Don't open if clicking on button
+				if ((e.target as HTMLElement).closest('button')) {
+					return;
+				}
 				this.app.workspace.openLinkText(this.file!.path, '', false);
 			});
 			card.style.cursor = 'pointer';

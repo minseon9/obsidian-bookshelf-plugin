@@ -318,6 +318,25 @@
 	font-size: 14px;
 }
 
+/* Card Actions */
+.bookshelf-card-actions {
+	margin-top: 10px;
+	display: flex;
+	justify-content: center;
+}
+
+.bookshelf-card-actions button {
+	font-size: 12px;
+	padding: 5px 10px;
+}
+
+/* Note Title Bar Button */
+.bookshelf-progress-button {
+	margin-left: 10px;
+	font-size: 12px;
+	padding: 4px 8px;
+}
+
 /* Empty State (No books added) */
 .bookshelf-empty-state {
 	display: flex;
