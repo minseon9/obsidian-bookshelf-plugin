@@ -49,7 +49,7 @@ export class OpenLibraryClient {
 			// Get edition details if available
 			let edition: OpenLibraryEdition | null = null;
 			if (work.key) {
-				// Try to get the first edition
+				// Try to get the first edition (ignore errors)
 				const editionsUrl = `${this.baseUrl}${work.key}/editions.json`;
 				try {
 					const editionsData = await this.httpClient.get<{ entries: OpenLibraryEdition[] }>(editionsUrl);
@@ -57,7 +57,7 @@ export class OpenLibraryClient {
 						edition = editionsData.entries[0];
 					}
 				} catch (e) {
-					// Ignore edition fetch errors
+					// Ignore edition fetch errors - work data is sufficient
 				}
 			}
 
