@@ -18,6 +18,7 @@ function bundleCSS() {
 	const stylesDir = 'styles';
 	const cssFiles = [
 		'searchModal.css',
+		'bookshelfView.css',
 	];
 	
 	let bundledCSS = '/* Bookshelf Plugin Styles */\n\n';

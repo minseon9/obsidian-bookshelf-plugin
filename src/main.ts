@@ -2,6 +2,7 @@ import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, BookshelfSettings, BookshelfSettingTab } from "./settings";
 import { registerCommands } from "./commands";
 import { FileManagerUtils } from "./utils/fileManagerUtils";
+import { BookshelfView } from "./views/bookshelfView";
 
 export default class BookshelfPlugin extends Plugin {
 	settings: BookshelfSettings;
@@ -18,9 +19,39 @@ export default class BookshelfPlugin extends Plugin {
 
 		// Register commands
 		registerCommands(this.app, this);
+
+		// Register view
+		this.registerView('bookshelf-view', (leaf) => new BookshelfView(leaf, this));
+
+		// Add command to open view
+		this.addCommand({
+			id: 'bookshelf-open-view',
+			name: 'Open Bookshelf',
+			callback: () => {
+				this.activateView();
+			},
+		});
 	}
 
-	onunload() {
+	async onunload() {
+		this.app.workspace.detachLeavesOfType('bookshelf-view');
+	}
+
+	async activateView() {
+		const { workspace } = this.app;
+
+		let leaf = workspace.getLeavesOfType('bookshelf-view')[0];
+		if (!leaf) {
+			const rightLeaf = workspace.getRightLeaf(false);
+			if (rightLeaf) {
+				await rightLeaf.setViewState({ type: 'bookshelf-view', active: true });
+				leaf = rightLeaf;
+			}
+		}
+
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
 	}
 
 	async loadSettings() {
