@@ -32,10 +32,7 @@ export class OpenLibraryClient {
 			const data = await this.httpClient.get<OpenLibrarySearchResponse>(url);
 			return this.convertSearchDocsToBooks(data.docs);
 		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(`Failed to search books: ${error.message}`);
-			}
-			throw error;
+			throw new Error(`Failed to search books. Please try again later.`);
 		}
 	}
 
@@ -66,10 +63,7 @@ export class OpenLibraryClient {
 
 			return this.convertWorkToBook(work, edition);
 		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(`Failed to get book details: ${error.message}`);
-			}
-			throw error;
+			throw new Error(`Failed to get book details. Please try again later.`);
 		}
 	}
 

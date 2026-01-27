@@ -28,30 +28,13 @@ export class HttpClient {
 
 			// Check if response is ok, throw error if not
 			if (!response.ok) {
-				throw new HttpError(
-					`HTTP error! status: ${response.status}`,
-					response.status,
-					response.statusText
-				);
+				throw new Error(`Request failed. Please try again later.`);
 			}
 
 			return response;
 		} catch (error) {
 			clearTimeout(timeoutId);
-
-			if (error instanceof HttpError) {
-				throw error;
-			}
-
-			if (error instanceof Error && error.name === 'AbortError') {
-				throw new Error(`Request timeout after ${this.timeout}ms`);
-			}
-
-			if (error instanceof Error) {
-				throw new Error(`Request failed: ${error.message}`);
-			}
-
-			throw error;
+			throw new Error(`Request failed. Please try again later.`);
 		}
 	}
 
@@ -63,18 +46,15 @@ export class HttpClient {
 	 * @throws Error if request fails or response is not valid JSON
 	 */
 	async get<T>(url: string, options: RequestInit = {}): Promise<T> {
-		const response = await this.fetch(url, {
-			...options,
-			method: 'GET',
-		});
-
 		try {
+			const response = await this.fetch(url, {
+				...options,
+				method: 'GET',
+			});
+
 			return await response.json();
 		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(`Failed to parse JSON response: ${error.message}`);
-			}
-			throw error;
+			throw new Error(`Request failed. Please try again later.`);
 		}
 	}
 }
