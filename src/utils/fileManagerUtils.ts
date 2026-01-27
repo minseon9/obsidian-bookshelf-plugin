@@ -167,7 +167,9 @@ export class FileManagerUtils {
 		const { frontmatter } = this.frontmatterProcessor.extractFrontmatter(content);
 
 		// Get total pages from frontmatter
-		const totalPages = typeof frontmatter.total === 'number' ? frontmatter.total : undefined;
+		const totalPages = typeof frontmatter.total === 'number' 
+			? frontmatter.total 
+			: (typeof frontmatter.totalPages === 'number' ? frontmatter.totalPages : undefined);
 
 		// Update frontmatter with new progress
 		const updatedContent = this.frontmatterProcessor.updateReadingProgress(

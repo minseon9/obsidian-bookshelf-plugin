@@ -19,6 +19,7 @@ function bundleCSS() {
 	const cssFiles = [
 		'searchModal.css',
 		'bookshelfView.css',
+		'progressModal.css',
 	];
 	
 	let bundledCSS = '/* Bookshelf Plugin Styles */\n\n';
