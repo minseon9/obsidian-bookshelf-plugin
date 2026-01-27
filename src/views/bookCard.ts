@@ -40,14 +40,14 @@ export class BookCard {
 		card.className = `bookshelf-book-card bookshelf-book-reading bookshelf-layout-${layout}`;
 
 		// Cover image
-		if (this.book.coverUrl || this.book.localCover) {
+		if (this.book.coverUrl) {
 			const coverContainer = card.createEl('div', {
 				cls: 'bookshelf-book-cover',
 			});
 
 			const coverImg = coverContainer.createEl('img', {
 				attr: {
-					src: this.book.localCover || this.book.coverUrl || '',
+					src: this.book.coverUrl || '',
 					alt: this.book.title || 'Book cover',
 				},
 			});

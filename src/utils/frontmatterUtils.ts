@@ -168,7 +168,6 @@ export class FrontmatterProcessor {
 	 */
 	bookToFrontmatter(book: Book): Record<string, any> {
 		return {
-			tag: '📚Book',
 			title: book.title,
 			subtitle: book.subtitle,
 			author: book.author,
@@ -178,7 +177,6 @@ export class FrontmatterProcessor {
 			total: book.totalPages,
 			isbn: `${book.isbn10 || ''} ${book.isbn13 || ''}`.trim() || undefined,
 			cover: book.coverUrl,
-			localCover: book.localCover,
 			status: book.status,
 			created: book.created,
 			updated: book.updated,
@@ -219,7 +217,6 @@ export class FrontmatterProcessor {
 			isbn10,
 			isbn13,
 			coverUrl: frontmatter.cover,
-			localCover: frontmatter.localCover,
 			status: frontmatter.status || 'unread',
 			readPage: typeof frontmatter.read_page === 'number' ? frontmatter.read_page : 0,
 			readStarted: frontmatter.read_started,

@@ -94,6 +94,15 @@ export class FileManagerUtils {
 	}
 
 	/**
+	 * Get shelf folder path (bookFolder/shelf)
+	 * @param baseFolder Base folder path
+	 * @returns Shelf folder path
+	 */
+	getShelfFolderPath(baseFolder: string): string {
+		return normalizePath(`${baseFolder}/shelf`);
+	}
+
+	/**
 	 * Create book note from template
 	 * @param book Book data
 	 * @param baseFolder Base folder path (e.g., "Bookshelf")
@@ -207,5 +216,45 @@ export class FileManagerUtils {
 		}
 		
 		return book;
+	}
+
+	/**
+	 * Ensure base view file exists (Bookshelf/shelf/base.md)
+	 * @param baseFolder Base folder path
+	 */
+	async ensureBaseViewFile(baseFolder: string): Promise<void> {
+		const shelfFolder = this.getShelfFolderPath(baseFolder);
+		await this.ensureFolder(shelfFolder);
+
+		const baseFilePath = normalizePath(`${shelfFolder}/base.md`);
+		const existingFile = this.app.vault.getAbstractFileByPath(baseFilePath);
+
+		if (!existingFile) {
+			// Create base view file with Bookshelf View content
+			const baseContent = `---
+title: Bookshelf
+type: bookshelf-view
+---
+
+# Bookshelf
+
+This is the main Bookshelf view page. Use the "Open Bookshelf" command or ribbon icon to view your books.
+
+## Quick Actions
+
+- **Search and Add Book**: Use the ribbon icon or command to search and add new books
+- **Update Progress**: Click on a reading book card or use the command to update reading progress
+
+## Your Books
+
+Books are stored in the \`books\` folder and displayed here based on their reading status.
+
+- **Reading**: Books you're currently reading (shown with cover images)
+- **Unread**: Books you haven't started yet (shown as shelf spines)
+- **Finished**: Books you've completed (shown as shelf spines)
+`;
+
+			await this.app.vault.create(baseFilePath, baseContent);
+		}
 	}
 }

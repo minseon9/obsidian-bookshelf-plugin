@@ -17,6 +17,10 @@ export default class BookshelfPlugin extends Plugin {
 		await fileManager.ensureFolder(this.settings.bookFolder);
 		await fileManager.ensureFolder(fileManager.getBooksFolderPath(this.settings.bookFolder));
 		await fileManager.ensureFolder(fileManager.getInteractionFolderPath(this.settings.bookFolder));
+		await fileManager.ensureFolder(fileManager.getShelfFolderPath(this.settings.bookFolder));
+		
+		// Create base view file if it doesn't exist
+		await fileManager.ensureBaseViewFile(this.settings.bookFolder);
 
 		// Add settings tab
 		this.addSettingTab(new BookshelfSettingTab(this.app, this));
