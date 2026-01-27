@@ -75,22 +75,43 @@ export class FileManagerUtils {
 	}
 
 	/**
+	 * Get books folder path (bookFolder/books)
+	 * @param baseFolder Base folder path
+	 * @returns Books folder path
+	 */
+	getBooksFolderPath(baseFolder: string): string {
+		return normalizePath(`${baseFolder}/books`);
+	}
+
+	/**
+	 * Get interaction folder path (bookFolder/.bookshelf)
+	 * @param baseFolder Base folder path
+	 * @returns Interaction folder path
+	 */
+	getInteractionFolderPath(baseFolder: string): string {
+		return normalizePath(`${baseFolder}/.bookshelf`);
+	}
+
+	/**
 	 * Create book note from template
 	 * @param book Book data
-	 * @param folderPath Folder path
+	 * @param baseFolder Base folder path (e.g., "Bookshelf")
 	 * @param templatePath Template file path
 	 * @returns Created file
 	 */
 	async createBookNote(
 		book: Book,
-		folderPath: string,
+		baseFolder: string,
 		templatePath: string
 	): Promise<TFile> {
+		// Use books subfolder
+		const booksFolder = this.getBooksFolderPath(baseFolder);
+		
 		// Ensure folder exists
-		await this.ensureFolder(folderPath);
+		await this.ensureFolder(booksFolder);
 
 		// Check if file already exists
-		const existing = await this.findExistingBookNote(folderPath, book.title);
+		const existing = await this.findExistingBookNote(booksFolder, book.title);
 		if (existing) {
 			throw new Error(`Book note already exists: ${existing.path}`);
 		}
@@ -100,9 +121,8 @@ export class FileManagerUtils {
 		const content = this.templateProcessor.processTemplate(template, book);
 
 		// Create file
-		const normalizedPath = normalizePath(folderPath);
 		const fileName = `${this.generateFileName(book.title)}.md`;
-		const filePath = normalizePath(`${normalizedPath}/${fileName}`);
+		const filePath = normalizePath(`${booksFolder}/${fileName}`);
 
 		const file = await this.app.vault.create(filePath, content);
 		return file;

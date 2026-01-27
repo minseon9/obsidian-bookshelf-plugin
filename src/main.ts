@@ -10,9 +10,11 @@ export default class BookshelfPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// Ensure default folder exists
+		// Ensure default folders exist
 		const fileManager = new FileManagerUtils(this.app);
 		await fileManager.ensureFolder(this.settings.bookFolder);
+		await fileManager.ensureFolder(fileManager.getBooksFolderPath(this.settings.bookFolder));
+		await fileManager.ensureFolder(fileManager.getInteractionFolderPath(this.settings.bookFolder));
 
 		// Add settings tab
 		this.addSettingTab(new BookshelfSettingTab(this.app, this));

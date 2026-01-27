@@ -219,12 +219,10 @@ export class SearchModal extends Modal {
 				status: this.plugin.settings.defaultStatus,
 			};
 
-			// Ensure folder exists
-			await this.fileManager.ensureFolder(this.plugin.settings.bookFolder);
-
-			// Check if book already exists
+			// Check if book already exists (books folder)
+			const booksFolder = this.fileManager.getBooksFolderPath(this.plugin.settings.bookFolder);
 			const existingFile = await this.fileManager.findExistingBookNote(
-				this.plugin.settings.bookFolder,
+				booksFolder,
 				bookWithStatus.title
 			);
 
@@ -238,7 +236,7 @@ export class SearchModal extends Modal {
 				return;
 			}
 
-			// Create book note
+			// Create book note (uses books subfolder internally)
 			await this.fileManager.createBookNote(
 				bookWithStatus,
 				this.plugin.settings.bookFolder,

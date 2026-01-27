@@ -6,7 +6,7 @@ import BookshelfPlugin from "./main";
  */
 export interface BookshelfSettings {
 	// Folder settings
-	bookFolder: string;
+	bookFolder: string; // Base folder (e.g., "Bookshelf")
 	templateFile: string;
 
 	// API settings

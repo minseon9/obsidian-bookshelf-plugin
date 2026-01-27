@@ -48,9 +48,12 @@ export class BookshelfView extends ItemView {
 	private async loadBooks(): Promise<void> {
 		this.books = [];
 
-		const folder = this.app.vault.getAbstractFileByPath(
+		// Load from books subfolder
+		const booksFolderPath = this.fileManager.getBooksFolderPath(
 			this.plugin.settings.bookFolder
 		);
+
+		const folder = this.app.vault.getAbstractFileByPath(booksFolderPath);
 
 		if (!folder || !(folder instanceof TFolder)) {
 			return;
@@ -208,10 +211,14 @@ export class BookshelfView extends ItemView {
 		});
 
 		// Render books
-		if (filteredBooks.length === 0) {
+		if (this.books.length === 0) {
+			// Show empty state when no books are added
+			this.renderEmptyState(booksContainer);
+		} else if (filteredBooks.length === 0) {
+			// Show no results for current filter
 			booksContainer.createEl('div', {
 				cls: 'bookshelf-empty',
-				text: 'No books found. Use "Search book" command to add books.',
+				text: `No ${this.currentFilter === 'all' ? '' : this.currentFilter} books found.`,
 			});
 		} else {
 			filteredBooks.forEach(({ book, file }) => {
@@ -220,6 +227,42 @@ export class BookshelfView extends ItemView {
 				booksContainer.appendChild(cardElement);
 			});
 		}
+	}
+
+	/**
+	 * Render empty state when no books are added
+	 */
+	private renderEmptyState(container: HTMLElement): void {
+		const emptyState = container.createEl('div', {
+			cls: 'bookshelf-empty-state',
+		});
+
+		emptyState.createEl('div', {
+			cls: 'bookshelf-empty-icon',
+			text: '??',
+		});
+
+		emptyState.createEl('h2', {
+			cls: 'bookshelf-empty-title',
+			text: 'No books added yet',
+		});
+
+		emptyState.createEl('p', {
+			cls: 'bookshelf-empty-description',
+			text: 'Start building your bookshelf by searching and adding books.',
+		});
+
+		const addButton = emptyState.createEl('button', {
+			cls: 'mod-cta',
+			text: 'Search and Add Book',
+		});
+
+		addButton.addEventListener('click', async () => {
+			// Import and open search modal
+			const { SearchModal } = await import('./searchModal');
+			const modal = new SearchModal(this.app, this.plugin);
+			modal.open();
+		});
 	}
 
 	/**
