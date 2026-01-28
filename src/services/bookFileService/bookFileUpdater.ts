@@ -20,7 +20,7 @@ export class BookFileUpdater {
 		const existingBook = FrontmatterConverter.frontmatterToBook(frontmatter);
 		const updatedBook: Partial<Book> = { ...existingBook, ...updates };
 		const updatedFrontmatter = FrontmatterConverter.bookToFrontmatter(updatedBook as Book);
-		updatedFrontmatter.updated = new Date().toISOString().replace('T', ' ').substring(0, 19);
+		updatedFrontmatter.updated = getCurrentDateTime();
 		const frontmatterString = FrontmatterCreator.create(updatedFrontmatter);
 		const newContent = `${frontmatterString}\n${body}`;
 		await this.app.vault.modify(file, newContent);

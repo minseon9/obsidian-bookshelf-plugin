@@ -97,7 +97,13 @@ export class BookCard {
 			startedRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
 			const startedLabel = startedRow.createEl('span', { text: 'Started:' });
 			startedLabel.style.cssText = 'color: var(--text-faint); font-size: 11px;';
-			const startedValue = startedRow.createEl('span', { text: this.book.readStarted.split(' ')[0] });
+			// Handle both "YYYY-MM-DD HH:mm:ss" and ISO formats
+			const dateStr = typeof this.book.readStarted === 'string' 
+				? (this.book.readStarted.includes('T') 
+					? this.book.readStarted.split('T')[0] 
+					: this.book.readStarted.split(' ')[0])
+				: String(this.book.readStarted);
+			const startedValue = startedRow.createEl('span', { text: dateStr });
 			startedValue.style.cssText = 'font-weight: 600; color: var(--text-normal); font-size: 12px;';
 		} else {
 			// Show placeholder if not started yet
