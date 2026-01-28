@@ -17,6 +17,7 @@ export interface OpenLibrarySearchDoc {
 	edition_count?: number;
 	first_publish_year?: number;
 	number_of_pages_median?: number;
+	number_of_pages?: number; // Also check direct number_of_pages field
 	publish_date?: string[];
 	publish_year?: number[];
 	publisher?: string[];
@@ -160,4 +161,33 @@ export interface OpenLibraryEditionsResponse {
 	};
 	size: number;
 	entries: OpenLibraryEdition[];
+}
+
+/**
+ * Open Library Books API response
+ * Based on: https://openlibrary.org/dev/docs/api/books
+ */
+export interface OpenLibraryBook {
+	identifiers?: {
+		isbn_10?: string[];
+		isbn_13?: string[];
+		openlibrary?: string[];
+		[key: string]: string[] | undefined;
+	};
+	title?: string;
+	subtitle?: string;
+	authors?: Array<{
+		name?: string;
+		key?: string;
+	}>;
+	publishers?: string[];
+	publish_date?: string;
+	number_of_pages?: number;
+	cover?: {
+		small?: string;
+		medium?: string;
+		large?: string;
+	};
+	subjects?: string[];
+	[key: string]: any;
 }

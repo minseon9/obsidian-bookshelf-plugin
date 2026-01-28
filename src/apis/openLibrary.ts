@@ -23,12 +23,13 @@ export class OpenLibraryClient {
 	 * Search books by query
 	 * @param query Search query
 	 * @param limit Maximum number of results (default: 20)
+	 * @param offset Offset for pagination (default: 0)
 	 * @returns Array of Book objects
 	 */
-	async searchBooks(query: string, limit: number = 20): Promise<Book[]> {
+	async searchBooks(query: string, limit: number = 20, offset: number = 0): Promise<Book[]> {
 		try {
 			const encodedQuery = encodeURIComponent(query);
-			const url = `${this.baseUrl}/search.json?q=${encodedQuery}&limit=${limit}`;
+			const url = `${this.baseUrl}/search.json?q=${encodedQuery}&limit=${limit}&offset=${offset}`;
 
 			const data = await this.httpClient.get<OpenLibrarySearchResponse>(url);
 			return this.convertSearchDocsToBooks(data.docs);
@@ -54,6 +55,118 @@ export class OpenLibraryClient {
 		} catch (error) {
 			throw new Error(`Failed to get book details. Please try again later.`);
 		}
+	}
+
+	/**
+	 * Get book details by ISBN using Books API
+	 * Uses: https://openlibrary.org/isbn/{isbn}.json
+	 * @param isbn ISBN (10 or 13 digits)
+	 * @returns Book object or null if not found
+	 */
+	async getBookByISBN(isbn: string): Promise<Book | null> {
+		try {
+			// Use direct ISBN endpoint: /isbn/{isbn}.json
+			const url = `${this.baseUrl}/isbn/${isbn}.json`;
+			const edition = await this.httpClient.get<OpenLibraryEdition>(url);
+			
+			// Get work details if available
+			let work: OpenLibraryWork | null = null;
+			if (edition.works && edition.works.length > 0) {
+				const firstWork = edition.works[0];
+				if (firstWork?.key) {
+					try {
+						const workKey = firstWork.key;
+						const workUrl = `${this.baseUrl}${workKey}.json`;
+						work = await this.httpClient.get<OpenLibraryWork>(workUrl);
+					} catch (e) {
+						// Ignore work fetch errors
+					}
+				}
+			}
+
+			return this.convertEditionToBook(edition, work, isbn);
+		} catch (error) {
+			console.error('[OpenLibrary] Error fetching book by ISBN:', error);
+			return null;
+		}
+	}
+
+	/**
+	 * Get book details by Open Library identifier using Books API
+	 * Uses: https://openlibrary.org/books/{olid}.json
+	 * @param olid Open Library identifier (e.g., "OL123456M")
+	 * @returns Book object or null if not found
+	 */
+	async getBookByOLID(olid: string): Promise<Book | null> {
+		try {
+			// Use direct books endpoint: /books/{olid}.json
+			const url = `${this.baseUrl}/books/${olid}.json`;
+			const edition = await this.httpClient.get<OpenLibraryEdition>(url);
+			
+			// Get work details if available
+			let work: OpenLibraryWork | null = null;
+			if (edition.works && edition.works.length > 0) {
+				const firstWork = edition.works[0];
+				if (firstWork?.key) {
+					try {
+						const workKey = firstWork.key;
+						const workUrl = `${this.baseUrl}${workKey}.json`;
+						work = await this.httpClient.get<OpenLibraryWork>(workUrl);
+					} catch (e) {
+						// Ignore work fetch errors
+					}
+				}
+			}
+
+			return this.convertEditionToBook(edition, work);
+		} catch (error) {
+			console.error('[OpenLibrary] Error fetching book by OLID:', error);
+			return null;
+		}
+	}
+
+	/**
+	 * Convert Edition (from Books API) to Book
+	 */
+	private convertEditionToBook(edition: OpenLibraryEdition, work: OpenLibraryWork | null, isbn?: string): Book {
+		// Extract author names
+		const authors: string[] = [];
+		if (edition.authors && Array.isArray(edition.authors)) {
+			authors.push(...edition.authors.map(a => a.name || '').filter(name => name.length > 0));
+		}
+
+		const isbn10 = edition.isbn_10?.[0] || (isbn && isbn.length === 10 ? isbn : undefined);
+		const isbn13 = edition.isbn_13?.[0] || (isbn && isbn.length === 13 ? isbn : undefined);
+
+		let coverUrl: string | undefined;
+		if (edition.covers && edition.covers.length > 0 && edition.covers[0] !== undefined) {
+			coverUrl = this.getBookCover(edition.covers[0], 'M');
+		} else if (isbn13) {
+			coverUrl = this.getBookCover(isbn13, 'M');
+		} else if (isbn10) {
+			coverUrl = this.getBookCover(isbn10, 'M');
+		}
+
+		// Try to get number of pages from multiple sources (edition first, then work)
+		let totalPages: number | undefined;
+		if (edition.number_of_pages !== undefined && edition.number_of_pages !== null) {
+			totalPages = edition.number_of_pages;
+		} else if (work?.number_of_pages !== undefined && work.number_of_pages !== null) {
+			totalPages = work.number_of_pages;
+		}
+
+		return createBookFromData({
+			title: edition.title || work?.title || '',
+			subtitle: edition.subtitle || work?.subtitle,
+			author: authors,
+			isbn10,
+			isbn13,
+			publisher: edition.publishers?.[0] || work?.publishers?.[0],
+			publishDate: edition.publish_date || work?.publish_date,
+			totalPages,
+			coverUrl,
+			category: edition.subjects?.slice(0, 5) || work?.subjects?.slice(0, 5) || [],
+		});
 	}
 
 	/**
@@ -103,6 +216,7 @@ export class OpenLibraryClient {
 
 	/**
 	 * Convert search document to Book
+	 * Note: Search API may not have complete data, so ISBN is preserved for later Books API lookup
 	 */
 	private convertSearchDocToBook(doc: OpenLibrarySearchDoc): Book {
 		const authors = doc.author_name || [];
@@ -121,6 +235,15 @@ export class OpenLibraryClient {
 		const publishYear = doc.first_publish_year || doc.publish_year?.[0];
 		const publishDate = publishYear ? publishYear.toString() : doc.publish_date?.[0];
 
+		// Try to get number of pages from multiple sources
+		// Note: Search API often doesn't have this, so we'll fetch from Books API when adding
+		let totalPages: number | undefined;
+		if (doc.number_of_pages_median !== undefined && doc.number_of_pages_median !== null) {
+			totalPages = doc.number_of_pages_median;
+		} else if (doc.number_of_pages !== undefined && doc.number_of_pages !== null) {
+			totalPages = doc.number_of_pages;
+		}
+
 		return createBookFromData({
 			title: doc.title,
 			subtitle: doc.subtitle,
@@ -129,7 +252,7 @@ export class OpenLibraryClient {
 			isbn13,
 			publisher: doc.publisher?.[0],
 			publishDate,
-			totalPages: doc.number_of_pages_median,
+			totalPages, // May be undefined from search API - will be filled by Books API
 			coverUrl,
 			category: doc.subject?.slice(0, 5), // Limit to first 5 subjects
 		});
@@ -166,6 +289,14 @@ export class OpenLibraryClient {
 			coverUrl = this.getBookCover(isbn10, 'M');
 		}
 
+		// Try to get number of pages from multiple sources (edition first, then work)
+		let totalPages: number | undefined;
+		if (edition?.number_of_pages !== undefined && edition.number_of_pages !== null) {
+			totalPages = edition.number_of_pages;
+		} else if (work.number_of_pages !== undefined && work.number_of_pages !== null) {
+			totalPages = work.number_of_pages;
+		}
+
 		return createBookFromData({
 			title: work.title,
 			subtitle: work.subtitle,
@@ -174,7 +305,7 @@ export class OpenLibraryClient {
 			isbn13,
 			publisher: edition?.publishers?.[0] || work.publishers?.[0],
 			publishDate: edition?.publish_date || work.publish_date,
-			totalPages: edition?.number_of_pages || work.number_of_pages,
+			totalPages,
 			coverUrl,
 			category: work.subjects?.slice(0, 5),
 		});
