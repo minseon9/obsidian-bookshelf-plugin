@@ -1,52 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import BookshelfPlugin from "./main";
+import BookshelfPlugin from "../main";
+import type { BookshelfSettings } from "./types";
 
-/**
- * Bookshelf plugin settings interface
- */
-export interface BookshelfSettings {
-	// Folder settings
-	bookFolder: string; // Base folder (e.g., "Bookshelf")
-
-	// API settings
-	apiTimeout: number;
-	searchResultLimit: number;
-
-	// Bookshelf View settings
-	defaultSort: 'date' | 'title' | 'author' | 'progress';
-
-	// Auto update
-	autoUpdateTimestamp: boolean;
-	autoStatusChange: boolean; // Auto change status when finished
-	showProgressNotification: boolean;
-
-	// Reading history
-	trackReadingHistory: boolean;
-	requireReadingNotes: boolean;
-
-	// Default values
-	defaultStatus: 'unread' | 'reading';
-}
-
-/**
- * Default settings
- */
-export const DEFAULT_SETTINGS: BookshelfSettings = {
-	bookFolder: 'Bookshelf',
-	apiTimeout: 5000,
-	searchResultLimit: 20,
-	defaultSort: 'date',
-	autoUpdateTimestamp: true,
-	autoStatusChange: true,
-	showProgressNotification: true,
-	trackReadingHistory: true,
-	requireReadingNotes: false,
-	defaultStatus: 'unread',
-};
-
-/**
- * Bookshelf plugin settings tab
- */
 export class BookshelfSettingTab extends PluginSettingTab {
 	plugin: BookshelfPlugin;
 
@@ -57,14 +12,10 @@ export class BookshelfSettingTab extends PluginSettingTab {
 
 	display(): void {
 		const { containerEl } = this;
-
 		containerEl.empty();
-
 		containerEl.createEl('h2', { text: 'Bookshelf Settings' });
 
-		// Folder settings
 		containerEl.createEl('h3', { text: 'Folder Settings' });
-
 		new Setting(containerEl)
 			.setName('Book notes folder')
 			.setDesc('Folder path where book notes will be saved')
@@ -76,9 +27,7 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		// API settings
 		containerEl.createEl('h3', { text: 'API Settings' });
-
 		new Setting(containerEl)
 			.setName('API timeout (ms)')
 			.setDesc('Timeout duration for Open Library API requests (in milliseconds)')
@@ -107,10 +56,7 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					}
 				}));
 
-
-		// Auto update settings
 		containerEl.createEl('h3', { text: 'Auto Update' });
-
 		new Setting(containerEl)
 			.setName('Auto update timestamp')
 			.setDesc('Whether to automatically update the updated field when book information is modified')
@@ -119,7 +65,6 @@ export class BookshelfSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.autoUpdateTimestamp = value;
 					await this.plugin.saveSettings();
-					// Re-register event listener
 					if (value) {
 						this.plugin.registerAutoUpdateTimestamp();
 					}
@@ -145,9 +90,7 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		// Reading history settings
 		containerEl.createEl('h3', { text: 'Reading History' });
-
 		new Setting(containerEl)
 			.setName('Track reading history')
 			.setDesc('Whether to track reading history (pages read per session)')
@@ -168,9 +111,7 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		// Bookshelf View settings
 		containerEl.createEl('h3', { text: 'Bookshelf View' });
-
 		new Setting(containerEl)
 			.setName('Default sort')
 			.setDesc('Default sort order for Bookshelf View')
@@ -185,9 +126,7 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		// Default values
 		containerEl.createEl('h3', { text: 'Default Values' });
-
 		new Setting(containerEl)
 			.setName('Default reading status')
 			.setDesc('Default reading status for newly added books')
@@ -199,6 +138,5 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					this.plugin.settings.defaultStatus = value as 'unread' | 'reading';
 					await this.plugin.saveSettings();
 				}));
-
 	}
 }

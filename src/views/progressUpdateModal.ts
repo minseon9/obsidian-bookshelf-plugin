@@ -1,8 +1,9 @@
-import { App, Modal, Setting } from 'obsidian';
-import { Book } from '../models/book';
-import { ReadingRecord, getLastEndPage } from '../models/readingRecord';
-import { FileManagerUtils } from '../utils/fileManagerUtils';
-import { getCurrentDate } from '../utils/dateUtils';
+import {App, Modal, Setting} from 'obsidian';
+import {Book} from '../models/book';
+import {ReadingRecord} from '../models/readingRecord';
+import {getLastEndPage} from '../models/readingRecordFactory';
+import {BookFileReader} from '../services/bookFileService/bookFileReader';
+import {BookFileUpdater} from '../services/bookFileService/bookFileUpdater';
 import BookshelfPlugin from '../main';
 
 /**
@@ -10,7 +11,8 @@ import BookshelfPlugin from '../main';
  */
 export class ProgressUpdateModal extends Modal {
 	private plugin: BookshelfPlugin;
-	private fileManager: FileManagerUtils;
+	private bookFileReader: BookFileReader;
+	private bookFileUpdater: BookFileUpdater;
 	private book: Book | null = null;
 	private file: any; // TFile
 	private startPageInput: HTMLInputElement;
@@ -22,7 +24,8 @@ export class ProgressUpdateModal extends Modal {
 	constructor(app: App, plugin: BookshelfPlugin, file?: any) {
 		super(app);
 		this.plugin = plugin;
-		this.fileManager = new FileManagerUtils(app);
+		this.bookFileReader = new BookFileReader(app);
+		this.bookFileUpdater = new BookFileUpdater(app);
 		this.file = file || this.app.workspace.getActiveFile();
 	}
 
@@ -60,7 +63,7 @@ export class ProgressUpdateModal extends Modal {
 		}
 
 		try {
-			const bookData = await this.fileManager.getBookFromFile(this.file);
+			const bookData = await this.bookFileReader.read(this.file);
 			if (bookData.title) {
 				this.book = {
 					title: bookData.title || 'Unknown',
@@ -72,7 +75,6 @@ export class ProgressUpdateModal extends Modal {
 					publishDate: bookData.publishDate,
 					totalPages: bookData.totalPages,
 					coverUrl: bookData.coverUrl,
-					localCover: bookData.localCover,
 					category: bookData.category || [],
 					status: (bookData.status as any) || 'unread',
 					readPage: bookData.readPage || 0,
@@ -109,9 +111,9 @@ export class ProgressUpdateModal extends Modal {
 		}
 
 		// Get previous reading history from frontmatter summary (faster)
-		this.app.vault.read(this.file).then(content => {
-			const frontmatterProcessor = (this.fileManager as any).frontmatterProcessor;
-			const { frontmatter } = frontmatterProcessor.extractFrontmatter(content);
+		this.app.vault.read(this.file).then(async content => {
+					const { FrontmatterParser } = await import('../services/frontmatterService/frontmatterParser');
+			const { frontmatter } = FrontmatterParser.extract(content);
 			// Use reading_history_summary from frontmatter for statistics
 			const historySummary = frontmatter.reading_history_summary || [];
 			const history: ReadingRecord[] = historySummary.map((item: any) => ({
@@ -258,7 +260,7 @@ export class ProgressUpdateModal extends Modal {
 		}
 
 		try {
-			await this.fileManager.updateReadingProgress(
+			await this.bookFileUpdater.updateReadingProgress(
 				this.file, 
 				endPage,
 				startPage,
@@ -309,20 +311,6 @@ export class ProgressUpdateModal extends Modal {
 			cls: 'bookshelf-message bookshelf-message-error',
 		});
 
-		const icon = messageContainer.createEl('div', {
-			cls: 'bookshelf-message-icon',
-			text: '?',
-		});
-
-		const text = messageContainer.createEl('div', {
-			cls: 'bookshelf-message-text',
-			text: message,
-		});
-
-		const closeButton = messageContainer.createEl('button', {
-			cls: 'bookshelf-message-close',
-			text: 'Dismiss',
-		});
 		closeButton.addEventListener('click', () => {
 			messageContainer.remove();
 		});

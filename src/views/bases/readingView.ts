@@ -1,8 +1,8 @@
 import { TFile } from 'obsidian';
-import { Book } from '../models/book';
-import { BasesViewBase } from './BasesViewBase';
-import { BookCard } from '../views/bookCard';
-import BookshelfPlugin from '../main';
+import { Book } from '../../models/book';
+import { BasesViewBase } from './basesViewBase';
+import { BookCard } from '../bookCard';
+import BookshelfPlugin from '../../main';
 
 /**
  * Reading View - Displays books currently being read
@@ -100,8 +100,3 @@ export class ReadingBasesView extends BasesViewBase {
 	}
 }
 
-export function buildReadingViewFactory(plugin: BookshelfPlugin) {
-	return (controller: any, containerEl: HTMLElement) => {
-		return new ReadingBasesView(controller, containerEl, plugin);
-	};
-}

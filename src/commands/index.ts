@@ -1,7 +1,7 @@
-import { App } from 'obsidian';
+import {App} from 'obsidian';
 import BookshelfPlugin from '../main';
-import { registerSearchBookCommand } from './searchBook';
-import { registerUpdateProgressCommand } from './updateProgress';
+import {registerSearchBookCommand} from './searchBook';
+import {registerUpdateProgressCommand} from './updateProgress';
 
 /**
  * Register all commands

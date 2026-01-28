@@ -1,11 +1,11 @@
 /* eslint-disable no-console */
 import BookshelfPlugin from "../main";
-import { requireApiVersion } from "obsidian";
-import { buildBookshelfViewFactory as buildFactory } from "./BookshelfView";
-import { buildReadingViewFactory } from "./ReadingView";
-import { buildLibraryViewFactory } from "./UnreadFinishedView";
-import { buildStatisticsViewFactory } from "./StatisticsView";
-import { registerBasesView, unregisterBasesView } from "./api";
+import {requireApiVersion} from "obsidian";
+import {buildBookshelfViewFactory as buildFactory} from "../views/bases/factories/bookshelfViewFactory";
+import {buildReadingViewFactory} from "../views/bases/factories/readingViewFactory";
+import {buildLibraryViewFactory} from "../views/bases/factories/libraryViewFactory";
+import {buildStatisticsViewFactory} from "../views/bases/factories/statisticsViewFactory";
+import {registerBasesView, unregisterBasesView} from "./basesPluginClient";
 
 /**
  * Register Bookshelf views with Bases plugin
@@ -54,7 +54,7 @@ export async function registerBasesBookshelfView(plugin: BookshelfPlugin): Promi
 			}
 
 			// Refresh existing Bases views
-			plugin.app.workspace.iterateAllLeaves((leaf) => {
+			plugin.app.workspace.iterateAllLeaves((leaf: any) => {
 				if (leaf.view?.getViewType?.() === "bases") {
 					const view = leaf.view as any;
 					if (typeof view.refresh === "function") {

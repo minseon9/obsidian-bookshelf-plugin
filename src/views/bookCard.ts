@@ -1,7 +1,8 @@
 import { App, TFile } from 'obsidian';
-import { Book, BookStatus } from '../models/book';
+import { Book } from '../models/book';
+import { BookStatus } from '../models/bookStatus';
 import BookshelfPlugin from '../main';
-import { ProgressUpdateModal } from './progressModal';
+import { ProgressUpdateModal } from './progressUpdateModal';
 
 /**
  * Book card component for rendering book items in Bookshelf View

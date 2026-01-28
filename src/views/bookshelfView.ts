@@ -1,6 +1,8 @@
 import { ItemView, TFile, TFolder } from 'obsidian';
-import { Book, BookStatus } from '../models/book';
-import { FileManagerUtils } from '../utils/fileManagerUtils';
+import { Book } from '../models/book';
+import { BookStatus } from '../models/bookStatus';
+import { BookFileReader } from '../services/bookFileService/bookFileReader';
+import { PathManager } from '../services/pathService/pathManager';
 import { BookCard } from './bookCard';
 import BookshelfPlugin from '../main';
 
@@ -9,7 +11,7 @@ import BookshelfPlugin from '../main';
  */
 export class BookshelfView extends ItemView {
 	private plugin: BookshelfPlugin;
-	private fileManager: FileManagerUtils;
+	private bookFileReader: BookFileReader;
 	private books: Array<{ book: Book; file: TFile }> = [];
 	private currentFilter: BookStatus | 'all' = 'all';
 	private currentSort: 'date' | 'title' | 'author' | 'progress' = 'date';
@@ -24,7 +26,7 @@ export class BookshelfView extends ItemView {
 	constructor(leaf: any, plugin: BookshelfPlugin) {
 		super(leaf);
 		this.plugin = plugin;
-		this.fileManager = new FileManagerUtils(this.app);
+		this.bookFileReader = new BookFileReader(this.app);
 	}
 
 	getViewType(): string {
@@ -50,7 +52,7 @@ export class BookshelfView extends ItemView {
 		this.books = [];
 
 		// Load from books subfolder
-		const booksFolderPath = this.fileManager.getBooksFolderPath(
+		const booksFolderPath = PathManager.getBooksFolderPath(
 			this.plugin.settings.bookFolder
 		);
 
@@ -66,7 +68,7 @@ export class BookshelfView extends ItemView {
 
 		for (const file of files) {
 			try {
-				const bookData = await this.fileManager.getBookFromFile(file);
+				const bookData = await this.bookFileReader.read(file);
 				if (bookData.title) {
 					const book: Book = {
 						title: bookData.title || 'Unknown',
@@ -78,7 +80,6 @@ export class BookshelfView extends ItemView {
 						publishDate: bookData.publishDate,
 						totalPages: bookData.totalPages,
 						coverUrl: bookData.coverUrl,
-						localCover: bookData.localCover,
 						category: bookData.category || [],
 						status: (bookData.status as BookStatus) || 'unread',
 						readPage: bookData.readPage,
@@ -246,7 +247,7 @@ export class BookshelfView extends ItemView {
 
 		addButton.addEventListener('click', async () => {
 			// Import and open search modal
-			const { SearchModal } = await import('./searchModal');
+			const { SearchModal } = await import('./bookSearchModal');
 			const modal = new SearchModal(this.app, this.plugin);
 			modal.open();
 		});

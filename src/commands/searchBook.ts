@@ -1,5 +1,5 @@
 import { App } from 'obsidian';
-import { SearchModal } from '../views/searchModal';
+import { SearchModal } from '../views/bookSearchModal';
 import BookshelfPlugin from '../main';
 
 /**

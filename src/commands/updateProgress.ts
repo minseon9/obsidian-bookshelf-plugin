@@ -1,5 +1,5 @@
 import { App } from 'obsidian';
-import { ProgressUpdateModal } from '../views/progressModal';
+import { ProgressUpdateModal } from '../views/progressUpdateModal';
 import BookshelfPlugin from '../main';
 
 /**

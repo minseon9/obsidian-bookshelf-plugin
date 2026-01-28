@@ -1,12 +1,11 @@
-import { App, Modal, Setting } from 'obsidian';
+import { App, Modal, Setting, TFile } from 'obsidian';
 import { Book } from '../models/book';
 import { OpenLibraryClient } from '../apis/openLibrary';
-import { FileManagerUtils } from '../utils/fileManagerUtils';
+import { BookFileCreator } from '../services/bookFileService/bookFileCreator';
+import { BookFileReader } from '../services/bookFileService/bookFileReader';
+import { PathManager } from '../services/pathService/pathManager';
 import BookshelfPlugin from '../main';
 
-/**
- * Book search modal
- */
 export class SearchModal extends Modal {
 	private plugin: BookshelfPlugin;
 	private searchInput: HTMLInputElement;
@@ -14,7 +13,8 @@ export class SearchModal extends Modal {
 	private loadingIndicator: HTMLElement;
 	private errorMessage: HTMLElement;
 	private openLibraryClient: OpenLibraryClient;
-	private fileManager: FileManagerUtils;
+	private bookFileCreator: BookFileCreator;
+	private bookFileReader: BookFileReader;
 	private searchTimeout: NodeJS.Timeout | null = null;
 	private currentResults: Book[] = [];
 	private currentOffset: number = 0;
@@ -25,7 +25,8 @@ export class SearchModal extends Modal {
 		super(app);
 		this.plugin = plugin;
 		this.openLibraryClient = new OpenLibraryClient(this.plugin.settings.apiTimeout);
-		this.fileManager = new FileManagerUtils(app);
+		this.bookFileCreator = new BookFileCreator(app);
+		this.bookFileReader = new BookFileReader(app);
 	}
 
 	onOpen() {
@@ -80,9 +81,6 @@ export class SearchModal extends Modal {
 		}
 	}
 
-	/**
-	 * Handle search input with debouncing
-	 */
 	private handleSearchInput() {
 		const query = this.searchInput.value.trim();
 
@@ -106,15 +104,11 @@ export class SearchModal extends Modal {
 		this.currentOffset = 0;
 		this.hasMoreResults = false;
 
-		// Debounce search: wait 500ms after user stops typing
 		this.searchTimeout = setTimeout(() => {
 			this.performSearch(query, 0);
 		}, 500);
 	}
 
-	/**
-	 * Perform search
-	 */
 	private async performSearch(query: string, offset: number = 0) {
 		try {
 			const limit = this.plugin.settings.searchResultLimit || 20;
@@ -153,16 +147,11 @@ export class SearchModal extends Modal {
 		const scrollTop = container.scrollTop;
 		const scrollHeight = container.scrollHeight;
 		const clientHeight = container.clientHeight;
-
-		// Load more when user scrolls to 80% of the container
 		if (scrollTop + clientHeight >= scrollHeight * 0.8) {
 			this.loadMoreResults();
 		}
 	}
 
-	/**
-	 * Load more search results
-	 */
 	private async loadMoreResults() {
 		if (this.isLoadingMore || !this.hasMoreResults) return;
 
@@ -173,11 +162,7 @@ export class SearchModal extends Modal {
 		await this.performSearch(query, this.currentOffset);
 	}
 
-	/**
-	 * Render search results
-	 */
 	private renderResults(results: Book[]) {
-		// Only clear if this is a new search (offset 0)
 		if (this.currentOffset === results.length) {
 			this.resultsContainer.empty();
 		}
@@ -191,7 +176,6 @@ export class SearchModal extends Modal {
 		}
 
 		results.forEach((book, index) => {
-			// Skip if already rendered (for infinite scroll)
 			if (index < this.currentOffset - results.length) {
 				return;
 			}
@@ -272,146 +256,88 @@ export class SearchModal extends Modal {
 		}
 	}
 
-	/**
-	 * Add book to vault
-	 */
 	private async addBook(book: Book) {
 		try {
-			// Disable add button during processing
-			const addButtons = this.resultsContainer.querySelectorAll('button');
-			addButtons.forEach(btn => {
-				btn.disabled = true;
-				btn.textContent = 'Adding...';
-			});
-
-			// Try to get detailed book information from Books API using ISBN
-			// This is important for getting accurate totalPages and other detailed info
-			let detailedBook: Book = book;
-			if (book.isbn13) {
-				const booksApiBook = await this.openLibraryClient.getBookByISBN(book.isbn13);
-				if (booksApiBook) {
-					// Merge: prefer Books API data for detailed fields, keep search result as fallback
-					detailedBook = {
-						...book,
-						...booksApiBook,
-						// Prefer Books API totalPages (most accurate)
-						totalPages: booksApiBook.totalPages || book.totalPages,
-						// Keep original cover if Books API doesn't have one
-						coverUrl: booksApiBook.coverUrl || book.coverUrl,
-						// Keep original title/author if Books API is missing
-						title: booksApiBook.title || book.title,
-						author: booksApiBook.author.length > 0 ? booksApiBook.author : book.author,
-						// Prefer Books API publisher and publishDate
-						publisher: booksApiBook.publisher || book.publisher,
-						publishDate: booksApiBook.publishDate || book.publishDate,
-					};
-				}
-			} else if (book.isbn10) {
-				const booksApiBook = await this.openLibraryClient.getBookByISBN(book.isbn10);
-				if (booksApiBook) {
-					detailedBook = {
-						...book,
-						...booksApiBook,
-						// Prefer Books API totalPages (most accurate)
-						totalPages: booksApiBook.totalPages || book.totalPages,
-						coverUrl: booksApiBook.coverUrl || book.coverUrl,
-						title: booksApiBook.title || book.title,
-						author: booksApiBook.author.length > 0 ? booksApiBook.author : book.author,
-						publisher: booksApiBook.publisher || book.publisher,
-						publishDate: booksApiBook.publishDate || book.publishDate,
-					};
-				}
-			}
-
-			// Set default status from settings
-			const bookWithStatus: Book = {
-				...detailedBook,
-				status: this.plugin.settings.defaultStatus,
-			};
-
-			// Check if book already exists (books folder)
-			const booksFolder = this.fileManager.getBooksFolderPath(this.plugin.settings.bookFolder);
-			const existingFile = await this.fileManager.findExistingBookNote(
-				booksFolder,
-				bookWithStatus.title
-			);
-
-			if (existingFile) {
-				this.showError(`Book "${bookWithStatus.title}" already exists.`);
-				// Re-enable buttons
-				addButtons.forEach(btn => {
-					btn.disabled = false;
-					btn.textContent = 'Add Book';
-				});
-				return;
-			}
-
-			// Create book note (uses books subfolder internally)
-			const createdFile = await this.fileManager.createBookNote(
-				bookWithStatus,
-				this.plugin.settings.bookFolder
-			);
-
-			// Show success message
+			this.setButtonsState(true, 'Adding...');
+			const detailedBook = await this.fetchDetailedBookInfo(book);
+			const bookWithStatus = { ...detailedBook, status: this.plugin.settings.defaultStatus };
+			await this.validateBookNotExists(bookWithStatus);
+			const createdFile = await this.bookFileCreator.create(bookWithStatus, this.plugin.settings.bookFolder);
 			this.showSuccess(`Book "${bookWithStatus.title}" added successfully!`);
-			
-			// Force Bases views to refresh by triggering a workspace update
-			// Bases should auto-detect new files, but we can help it along
-			try {
-				// Trigger a workspace refresh event that Bases listens to
-				this.app.vault.trigger('modify', createdFile);
-				
-				// Also try to refresh any open Bases views
-				this.app.workspace.iterateAllLeaves((leaf) => {
-					if (leaf.view?.getViewType?.() === 'bases') {
-						const basesView = leaf.view as any;
-						// Try to trigger refresh if available
-						if (typeof basesView.requestUpdate === 'function') {
-							basesView.requestUpdate();
-						} else if (typeof basesView.refresh === 'function') {
-							basesView.refresh();
-						}
-					}
-				});
-			} catch (e) {
-				// Ignore errors - Bases should auto-detect anyway
-				console.debug('[Bookshelf] Error triggering Bases refresh:', e);
-			}
-			
-			// Close modal after a short delay
-			setTimeout(() => {
-				this.close();
-			}, 1000);
+			this.triggerViewRefresh(createdFile);
+			setTimeout(() => this.close(), 1000);
+			this.setButtonsState(false, 'Add Book');
 		} catch (error) {
 			this.showError(`Failed to add book: ${error instanceof Error ? error.message : 'Unknown error'}`);
-			// Re-enable buttons
-			const addButtons = this.resultsContainer.querySelectorAll('button');
-			addButtons.forEach(btn => {
-				btn.disabled = false;
-				btn.textContent = 'Add Book';
-			});
+			this.setButtonsState(false, 'Add Book');
 		}
 	}
 
-	/**
-	 * Show loading indicator
-	 */
+	private async fetchDetailedBookInfo(book: Book): Promise<Book> {
+		if (!book.coverEditionKey) {
+			return book;
+		}
+
+		const booksApiBook = await this.openLibraryClient.getBookByOLID(book.coverEditionKey);
+		if (!booksApiBook) {
+			return book;
+		}
+
+		return {
+			...book,
+			...booksApiBook,
+			totalPages: booksApiBook.totalPages || book.totalPages,
+			coverUrl: booksApiBook.coverUrl || book.coverUrl,
+			title: booksApiBook.title || book.title,
+			author: booksApiBook.author.length > 0 ? booksApiBook.author : book.author,
+			publisher: booksApiBook.publisher || book.publisher,
+			publishDate: booksApiBook.publishDate || book.publishDate,
+		};
+	}
+
+	private async validateBookNotExists(book: Book): Promise<void> {
+		const booksFolder = PathManager.getBooksFolderPath(this.plugin.settings.bookFolder);
+		const existingFile = await this.bookFileReader.findExisting(booksFolder, book.title);
+		if (existingFile) {
+			throw new Error(`Book "${book.title}" already exists.`);
+		}
+	}
+
+	private setButtonsState(disabled: boolean, text: string): void {
+		const buttons = this.resultsContainer.querySelectorAll('button');
+		buttons.forEach(btn => {
+			btn.disabled = disabled;
+			btn.textContent = text;
+		});
+	}
+
+	private triggerViewRefresh(file: TFile): void {
+		try {
+			this.app.vault.trigger('modify', file);
+			this.app.workspace.iterateAllLeaves((leaf) => {
+				if (leaf.view?.getViewType?.() === 'bases') {
+					const basesView = leaf.view as any;
+					if (typeof basesView.requestUpdate === 'function') {
+						basesView.requestUpdate();
+					} else if (typeof basesView.refresh === 'function') {
+						basesView.refresh();
+					}
+				}
+			});
+		} catch (e) {
+			console.debug('[Bookshelf] Error triggering Bases refresh:', e);
+		}
+	}
+
 	private showLoading() {
 		this.loadingIndicator.style.display = 'block';
 	}
 
-	/**
-	 * Hide loading indicator
-	 */
 	private hideLoading() {
 		this.loadingIndicator.style.display = 'none';
 	}
 
-	/**
-	 * Show error message with nice UI
-	 */
 	private showError(message: string) {
-		// Remove any existing messages
 		const existing = this.contentEl.querySelector('.bookshelf-message');
 		if (existing) existing.remove();
 
@@ -419,38 +345,22 @@ export class SearchModal extends Modal {
 			cls: 'bookshelf-message bookshelf-message-error',
 		});
 
-		const icon = messageContainer.createEl('div', {
-			cls: 'bookshelf-message-icon',
-			text: '?',
-		});
-
-		const text = messageContainer.createEl('div', {
-			cls: 'bookshelf-message-text',
-			text: message,
-		});
+		messageContainer.createEl('div', { cls: 'bookshelf-message-icon', text: '!' });
+		messageContainer.createEl('div', { cls: 'bookshelf-message-text', text: message });
 
 		const closeButton = messageContainer.createEl('button', {
 			cls: 'bookshelf-message-close',
 			text: 'Dismiss',
 		});
-		closeButton.addEventListener('click', () => {
-			messageContainer.remove();
-		});
+		closeButton.addEventListener('click', () => messageContainer.remove());
 	}
 
-	/**
-	 * Hide error message
-	 */
 	private hideError() {
 		const existing = this.contentEl.querySelector('.bookshelf-message');
 		if (existing) existing.remove();
 	}
 
-	/**
-	 * Show success message with nice UI
-	 */
 	private showSuccess(message: string) {
-		// Remove any existing messages
 		const existing = this.contentEl.querySelector('.bookshelf-message');
 		if (existing) existing.remove();
 
@@ -458,22 +368,13 @@ export class SearchModal extends Modal {
 			cls: 'bookshelf-message bookshelf-message-success',
 		});
 
-		const icon = messageContainer.createEl('div', {
-			cls: 'bookshelf-message-icon',
-			text: '?',
-		});
-
-		const text = messageContainer.createEl('div', {
-			cls: 'bookshelf-message-text',
-			text: message,
-		});
+		messageContainer.createEl('div', { cls: 'bookshelf-message-icon', text: '?' });
+		messageContainer.createEl('div', { cls: 'bookshelf-message-text', text: message });
 
 		const closeButton = messageContainer.createEl('button', {
 			cls: 'bookshelf-message-close',
 			text: 'Close',
 		});
-		closeButton.addEventListener('click', () => {
-			messageContainer.remove();
-		});
+		closeButton.addEventListener('click', () => messageContainer.remove());
 	}
 }

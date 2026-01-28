@@ -1,7 +1,5 @@
-/**
- * Adapter for accessing Bases data using public API (1.10.0+).
- * Eliminates all internal API dependencies.
- */
+import { BasesDataItem } from './basesDataItem';
+
 export class BasesDataAdapter {
 	constructor(private basesView: any) {}
 
@@ -156,14 +154,3 @@ export class BasesDataAdapter {
 	}
 }
 
-/**
- * Data item extracted from Bases
- */
-export interface BasesDataItem {
-	key: string;
-	data: any;
-	file: any;
-	path: string;
-	properties: Record<string, any>;
-	basesData: any;
-}

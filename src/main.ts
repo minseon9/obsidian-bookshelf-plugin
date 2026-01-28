@@ -1,17 +1,19 @@
 import { Plugin, MarkdownView, TFile, TAbstractFile, normalizePath } from 'obsidian';
-import { DEFAULT_SETTINGS, BookshelfSettings, BookshelfSettingTab } from "./settings";
+import { DEFAULT_SETTINGS, BookshelfSettings } from "./settings/types";
+import { BookshelfSettingTab } from "./settings/settingTab";
 import { registerCommands } from "./commands";
-import { FileManagerUtils } from "./utils/fileManagerUtils";
+import { FolderManager } from "./services/pathService/folderManager";
+import { PathManager } from "./services/pathService/pathManager";
+import { FrontmatterParser } from "./services/frontmatterService/frontmatterParser";
+import { FrontmatterCreator } from "./services/frontmatterService/frontmatterCreator";
 import { BookshelfView } from "./views/bookshelfView";
-import { SearchModal } from "./views/searchModal";
-import { ProgressUpdateModal } from "./views/progressModal";
+import { SearchModal } from "./views/bookSearchModal";
+import { ProgressUpdateModal } from "./views/progressUpdateModal";
 import { getCurrentDateTime } from "./utils/dateUtils";
-import { registerBasesBookshelfView, unregisterBasesViews } from "./bases/registration";
-import { 
-	generateBookshelfBaseFile,
-	generateLibraryBaseFile,
-	generateStatisticsBaseFile
-} from "./bases/defaultBasesFiles";
+import { registerBasesBookshelfView, unregisterBasesViews } from "./obsidian_bases/basesViewRegistrar";
+import { BookshelfBaseFileGenerator } from "./obsidian_bases/generators/bookshelfBaseFileGenerator";
+import { LibraryBaseFileGenerator } from "./obsidian_bases/generators/libraryBaseFileGenerator";
+import { StatisticsBaseFileGenerator } from "./obsidian_bases/generators/statisticsBaseFileGenerator";
 
 export default class BookshelfPlugin extends Plugin {
 	settings: BookshelfSettings;
@@ -19,13 +21,12 @@ export default class BookshelfPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// Ensure default folders exist
-		const fileManager = new FileManagerUtils(this.app);
+		const folderManager = new FolderManager(this.app);
 		try {
-			await fileManager.ensureFolder(this.settings.bookFolder);
-			await fileManager.ensureFolder(fileManager.getBooksFolderPath(this.settings.bookFolder));
-			await fileManager.ensureFolder(fileManager.getInteractionFolderPath(this.settings.bookFolder));
-			await fileManager.ensureFolder(fileManager.getViewsFolderPath(this.settings.bookFolder));
+			await folderManager.ensureFolder(this.settings.bookFolder);
+			await folderManager.ensureFolder(PathManager.getBooksFolderPath(this.settings.bookFolder));
+			await folderManager.ensureFolder(PathManager.getInteractionFolderPath(this.settings.bookFolder));
+			await folderManager.ensureFolder(PathManager.getViewsFolderPath(this.settings.bookFolder));
 			
 			// Create default .base files if they don't exist
 			await this.ensureDefaultBaseFiles();
@@ -94,8 +95,7 @@ export default class BookshelfPlugin extends Plugin {
 			return;
 		}
 
-		// Check if file is in books folder
-		const booksFolder = new FileManagerUtils(this.app).getBooksFolderPath(this.settings.bookFolder);
+		const booksFolder = PathManager.getBooksFolderPath(this.settings.bookFolder);
 		if (!file.path.startsWith(booksFolder)) {
 			return;
 		}
@@ -156,8 +156,7 @@ export default class BookshelfPlugin extends Plugin {
 	 * Register auto-update timestamp (public for settings tab)
 	 */
 	registerAutoUpdateTimestamp(): void {
-		const fileManager = new FileManagerUtils(this.app);
-		const booksFolder = fileManager.getBooksFolderPath(this.settings.bookFolder);
+		const booksFolder = PathManager.getBooksFolderPath(this.settings.bookFolder);
 
 		// Listen for file modifications
 		this.registerEvent(
@@ -174,8 +173,7 @@ export default class BookshelfPlugin extends Plugin {
 
 				try {
 					const content = await this.app.vault.read(file);
-					const frontmatterProcessor = (fileManager as any).frontmatterProcessor;
-					const { frontmatter, body } = frontmatterProcessor.extractFrontmatter(content);
+					const { frontmatter, body } = FrontmatterParser.extract(content);
 
 					// Only update if it's a book note (has title)
 					if (!frontmatter.title) {
@@ -185,8 +183,7 @@ export default class BookshelfPlugin extends Plugin {
 					// Update timestamp
 					frontmatter.updated = getCurrentDateTime();
 
-					// Reconstruct content
-					const frontmatterString = frontmatterProcessor.createFrontmatter(frontmatter);
+					const frontmatterString = FrontmatterCreator.create(frontmatter);
 					const newContent = `${frontmatterString}\n${body}`;
 
 					// Write back (avoid infinite loop by checking if changed)
@@ -203,8 +200,7 @@ export default class BookshelfPlugin extends Plugin {
 
 	async activateView() {
 		const { workspace } = this.app;
-		const fileManager = new FileManagerUtils(this.app);
-		const viewsFolder = fileManager.getViewsFolderPath(this.settings.bookFolder);
+		const viewsFolder = PathManager.getViewsFolderPath(this.settings.bookFolder);
 		const baseFilePath = normalizePath(`${viewsFolder}/bookshelf-default.base`);
 
 		// Try to open Bases view first
@@ -236,14 +232,13 @@ export default class BookshelfPlugin extends Plugin {
 	 * Ensure default .base files exist
 	 */
 	private async ensureDefaultBaseFiles(): Promise<void> {
-		const fileManager = new FileManagerUtils(this.app);
-		const viewsFolder = fileManager.getViewsFolderPath(this.settings.bookFolder);
+		const viewsFolder = PathManager.getViewsFolderPath(this.settings.bookFolder);
 
 		// Create all default .base files
 		const baseFiles = [
-			{ path: `${viewsFolder}/bookshelf-default.base`, generator: generateBookshelfBaseFile },
-			{ path: `${viewsFolder}/library.base`, generator: generateLibraryBaseFile },
-			{ path: `${viewsFolder}/statistics.base`, generator: generateStatisticsBaseFile },
+			{ path: `${viewsFolder}/bookshelf-default.base`, generator: BookshelfBaseFileGenerator },
+			{ path: `${viewsFolder}/library.base`, generator: LibraryBaseFileGenerator },
+			{ path: `${viewsFolder}/statistics.base`, generator: StatisticsBaseFileGenerator },
 		];
 
 		for (const { path, generator } of baseFiles) {
@@ -251,7 +246,7 @@ export default class BookshelfPlugin extends Plugin {
 			const existingFile = this.app.vault.getAbstractFileByPath(filePath);
 			if (!existingFile) {
 				try {
-					const content = generator(this.settings);
+					const content = generator.generate(this.settings);
 					await this.app.vault.create(filePath, content);
 				} catch (error) {
 					console.error(`[Bookshelf] Failed to create ${filePath}:`, error);

@@ -17,11 +17,12 @@ export interface OpenLibrarySearchDoc {
 	edition_count?: number;
 	first_publish_year?: number;
 	number_of_pages_median?: number;
-	number_of_pages?: number; // Also check direct number_of_pages field
+	number_of_pages?: number;
 	publish_date?: string[];
 	publish_year?: number[];
 	publisher?: string[];
-	isbn?: string[];
+	// Note: Search API does not include isbn field in response
+	// ISBN information is only available through Books API (/books/{olid}.json or /isbn/{isbn}.json)
 	language?: string[];
 	subject?: string[];
 	subtitle?: string;
@@ -39,6 +40,9 @@ export interface OpenLibrarySearchDoc {
 	want_to_read_count?: number;
 	currently_reading_count?: number;
 	already_read_count?: number;
+	id_standard_ebooks?: string[];
+	id_librivox?: string[];
+	id_project_gutenberg?: string[];
 }
 
 /**
@@ -109,19 +113,21 @@ export interface OpenLibraryWork {
 
 /**
  * Open Library Edition detail information
- * Based on actual API response structure
+ * Based on actual API response structure from /books/{olid}.json
+ * Example: https://openlibrary.org/books/OL25910450M.json
  */
 export interface OpenLibraryEdition {
-	key: string;
+	key: string; // e.g., "/books/OL25910450M"
 	title: string;
 	subtitle?: string;
+	description?: string;
 	authors?: Array<{
 		key: string;
 		name?: string;
 	}>;
 	publishers?: string[];
 	publish_date?: string;
-	number_of_pages?: number;
+	number_of_pages?: number; // This is the key field for total pages
 	isbn_10?: string[];
 	isbn_13?: string[];
 	covers?: number[];
@@ -132,11 +138,30 @@ export interface OpenLibraryEdition {
 	type?: {
 		key: string;
 	};
-	identifiers?: Record<string, string[]>;
+	identifiers?: {
+		goodreads?: string[];
+		librarything?: string[];
+		[key: string]: string[] | undefined;
+	};
 	ocaid?: string;
 	languages?: Array<{
 		key: string;
 	}>;
+	contributors?: Array<{
+		role?: string;
+		name?: string;
+	}>;
+	source_records?: string[];
+	local_id?: string[];
+	first_sentence?: {
+		type: string;
+		value: string;
+	} | string;
+	classifications?: Record<string, any>;
+	lc_classifications?: string[];
+	physical_format?: string;
+	oclc_numbers?: string[];
+	lccn?: string[];
 	created?: {
 		type: string;
 		value: string;
@@ -147,47 +172,4 @@ export interface OpenLibraryEdition {
 	};
 	latest_revision?: number;
 	revision?: number;
-}
-
-/**
- * Open Library Editions API response
- */
-export interface OpenLibraryEditionsResponse {
-	links?: {
-		self: string;
-		work: string;
-		next?: string;
-		prev?: string;
-	};
-	size: number;
-	entries: OpenLibraryEdition[];
-}
-
-/**
- * Open Library Books API response
- * Based on: https://openlibrary.org/dev/docs/api/books
- */
-export interface OpenLibraryBook {
-	identifiers?: {
-		isbn_10?: string[];
-		isbn_13?: string[];
-		openlibrary?: string[];
-		[key: string]: string[] | undefined;
-	};
-	title?: string;
-	subtitle?: string;
-	authors?: Array<{
-		name?: string;
-		key?: string;
-	}>;
-	publishers?: string[];
-	publish_date?: string;
-	number_of_pages?: number;
-	cover?: {
-		small?: string;
-		medium?: string;
-		large?: string;
-	};
-	subjects?: string[];
-	[key: string]: any;
 }

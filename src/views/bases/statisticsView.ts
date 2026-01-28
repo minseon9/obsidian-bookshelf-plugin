@@ -1,21 +1,8 @@
 import { TFile } from 'obsidian';
-import { Book } from '../models/book';
-import { BasesViewBase } from './BasesViewBase';
-import BookshelfPlugin from '../main';
-
-interface BookStatistics {
-	totalBooks: number;
-	reading: number;
-	unread: number;
-	finished: number;
-	totalPages: number;
-	readPages: number;
-	averageTimeToFinish: number; // days
-	categoryCounts: Record<string, number>;
-	yearlyStats: Record<string, { count: number; pages: number }>;
-	monthlyStats: Record<string, { count: number; pages: number }>;
-	readingDays: number;
-}
+import { Book } from '../../models/book';
+import { BasesViewBase } from './basesViewBase';
+import { BookStatistics } from './bookStatistics';
+import BookshelfPlugin from '../../main';
 
 /**
  * Statistics View - Displays reading statistics and graphs
@@ -79,7 +66,7 @@ export class StatisticsBasesView extends BasesViewBase {
 
 			// Categories
 			if (book.category && book.category.length > 0) {
-				book.category.forEach(cat => {
+				book.category.forEach((cat: string) => {
 					stats.categoryCounts[cat] = (stats.categoryCounts[cat] || 0) + 1;
 				});
 			}
@@ -121,9 +108,8 @@ export class StatisticsBasesView extends BasesViewBase {
 				// Get reading history summary from file
 				try {
 					const content = await this.plugin.app.vault.read(file);
-					const fileManager = new (await import('../utils/fileManagerUtils')).FileManagerUtils(this.plugin.app);
-					const frontmatterProcessor = (fileManager as any).frontmatterProcessor;
-					const { frontmatter } = frontmatterProcessor.extractFrontmatter(content);
+					const { FrontmatterParser } = await import('../../services/frontmatterService/frontmatterParser');
+					const { frontmatter } = FrontmatterParser.extract(content);
 					
 					const historySummary = frontmatter.reading_history_summary;
 					if (historySummary && Array.isArray(historySummary)) {
@@ -140,6 +126,42 @@ export class StatisticsBasesView extends BasesViewBase {
 		}
 
 		stats.readingDays = readingDaysSet.size;
+
+		// Calculate changes (variation) for yearly stats
+		const sortedYears = Object.keys(stats.yearlyStats).sort();
+		for (let i = 1; i < sortedYears.length; i++) {
+			const currentYear = sortedYears[i];
+			const previousYear = sortedYears[i - 1];
+			if (!currentYear || !previousYear) continue;
+			
+			const current = stats.yearlyStats[currentYear];
+			const previous = stats.yearlyStats[previousYear];
+			
+			if (current && previous) {
+				current.change = current.count - previous.count;
+				current.changePercent = previous.count > 0 
+					? Math.round((current.change / previous.count) * 100) 
+					: (current.count > 0 ? 100 : 0);
+			}
+		}
+
+		// Calculate changes (variation) for monthly stats
+		const sortedMonths = Object.keys(stats.monthlyStats).sort();
+		for (let i = 1; i < sortedMonths.length; i++) {
+			const currentMonth = sortedMonths[i];
+			const previousMonth = sortedMonths[i - 1];
+			if (!currentMonth || !previousMonth) continue;
+			
+			const current = stats.monthlyStats[currentMonth];
+			const previous = stats.monthlyStats[previousMonth];
+			
+			if (current && previous) {
+				current.change = current.count - previous.count;
+				current.changePercent = previous.count > 0 
+					? Math.round((current.change / previous.count) * 100) 
+					: (current.count > 0 ? 100 : 0);
+			}
+		}
 
 		// Average time to finish
 		if (finishedBooks.length > 0) {
@@ -284,7 +306,7 @@ export class StatisticsBasesView extends BasesViewBase {
 	}
 
 	private renderYearlyStats(container: HTMLElement, doc: Document): void {
-		const years = Object.keys(this.stats!.yearlyStats).sort().reverse().slice(0, 5);
+		const years = Object.keys(this.stats!.yearlyStats).sort().reverse();
 		if (years.length === 0) return;
 
 		const section = doc.createElement('div');
@@ -294,10 +316,23 @@ export class StatisticsBasesView extends BasesViewBase {
 		title.textContent = 'Books Finished by Year';
 		title.style.cssText = 'margin: 0 0 16px 0; font-size: 1.2em;';
 
-		// Chart container
+		// Chart container with line chart showing variation
 		const chartContainer = doc.createElement('div');
-		chartContainer.style.cssText = 'margin-bottom: 16px; height: 200px; position: relative;';
-		this.renderBarChart(chartContainer, doc, years.map(year => {
+		chartContainer.style.cssText = 'margin-bottom: 16px; height: 250px; position: relative;';
+		this.renderLineChart(chartContainer, doc, years.map(year => {
+			const stat = this.stats!.yearlyStats[year];
+			return {
+				label: year,
+				value: stat ? stat.count : 0,
+				change: stat?.change,
+				changePercent: stat?.changePercent,
+			};
+		}), 'Year');
+
+		// Bar chart for comparison
+		const barChartContainer = doc.createElement('div');
+		barChartContainer.style.cssText = 'margin-bottom: 16px; height: 200px; position: relative;';
+		this.renderBarChart(barChartContainer, doc, years.map(year => {
 			const stat = this.stats!.yearlyStats[year];
 			return {
 				label: year,
@@ -313,21 +348,36 @@ export class StatisticsBasesView extends BasesViewBase {
 			const item = doc.createElement('div');
 			item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--background-modifier-border);';
 
+			const leftContainer = doc.createElement('div');
+			leftContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
+
 			const label = doc.createElement('span');
 			label.textContent = year;
 			label.style.cssText = 'font-size: 14px; font-weight: 600;';
+
+			// Show change if available
+			if (stat.change !== undefined && stat.changePercent !== undefined) {
+				const changeEl = doc.createElement('span');
+				const isPositive = stat.change >= 0;
+				const changeText = isPositive ? `+${stat.change}` : `${stat.change}`;
+				const percentText = isPositive ? `+${stat.changePercent}%` : `${stat.changePercent}%`;
+				changeEl.textContent = `${changeText} (${percentText})`;
+				changeEl.style.cssText = `font-size: 11px; color: ${isPositive ? 'var(--interactive-success)' : 'var(--text-error)'};`;
+				leftContainer.appendChild(changeEl);
+			}
 
 			const value = doc.createElement('span');
 			value.textContent = `${stat.count} books, ${stat.pages.toLocaleString()} pages`;
 			value.style.cssText = 'font-size: 14px; color: var(--text-muted);';
 
-			item.appendChild(label);
+			item.appendChild(leftContainer);
 			item.appendChild(value);
 			list.appendChild(item);
 		});
 
 		section.appendChild(title);
 		section.appendChild(chartContainer);
+		section.appendChild(barChartContainer);
 		section.appendChild(list);
 		container.appendChild(section);
 	}
@@ -343,13 +393,37 @@ export class StatisticsBasesView extends BasesViewBase {
 		title.textContent = 'Books Finished by Month (Last 12)';
 		title.style.cssText = 'margin: 0 0 16px 0; font-size: 1.2em;';
 
-		// Chart container
+		// Chart container with line chart showing variation
 		const chartContainer = doc.createElement('div');
-		chartContainer.style.cssText = 'margin-bottom: 16px; height: 200px; position: relative;';
-		this.renderBarChart(chartContainer, doc, months.map(month => {
+		chartContainer.style.cssText = 'margin-bottom: 16px; height: 250px; position: relative;';
+		this.renderLineChart(chartContainer, doc, months.map(month => {
 			const stat = this.stats!.monthlyStats[month];
+			// Format month label (e.g., "2026-01" -> "Jan 2026")
+			const parts = month.split('-');
+			const year = parts[0] || '';
+			const monthNum = parts[1] || '1';
+			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
 			return {
-				label: month,
+				label: monthLabel,
+				value: stat ? stat.count : 0,
+				change: stat?.change,
+				changePercent: stat?.changePercent,
+			};
+		}), 'Month');
+
+		// Bar chart for comparison
+		const barChartContainer = doc.createElement('div');
+		barChartContainer.style.cssText = 'margin-bottom: 16px; height: 200px; position: relative;';
+		this.renderBarChart(barChartContainer, doc, months.map(month => {
+			const stat = this.stats!.monthlyStats[month];
+			const parts = month.split('-');
+			const year = parts[0] || '';
+			const monthNum = parts[1] || '1';
+			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
+			return {
+				label: monthLabel,
 				value: stat ? stat.count : 0,
 			};
 		}));
@@ -359,24 +433,45 @@ export class StatisticsBasesView extends BasesViewBase {
 			const stat = this.stats!.monthlyStats[month];
 			if (!stat) return;
 			
+			const parts = month.split('-');
+			const year = parts[0] || '';
+			const monthNum = parts[1] || '1';
+			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
+			
 			const item = doc.createElement('div');
 			item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--background-modifier-border);';
 
+			const leftContainer = doc.createElement('div');
+			leftContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
+
 			const label = doc.createElement('span');
-			label.textContent = month;
-			label.style.cssText = 'font-size: 14px;';
+			label.textContent = monthLabel;
+			label.style.cssText = 'font-size: 14px; font-weight: 600;';
+
+			// Show change if available
+			if (stat.change !== undefined && stat.changePercent !== undefined) {
+				const changeEl = doc.createElement('span');
+				const isPositive = stat.change >= 0;
+				const changeText = isPositive ? `+${stat.change}` : `${stat.change}`;
+				const percentText = isPositive ? `+${stat.changePercent}%` : `${stat.changePercent}%`;
+				changeEl.textContent = `${changeText} (${percentText})`;
+				changeEl.style.cssText = `font-size: 11px; color: ${isPositive ? 'var(--interactive-success)' : 'var(--text-error)'};`;
+				leftContainer.appendChild(changeEl);
+			}
 
 			const value = doc.createElement('span');
-			value.textContent = `${stat.count} books`;
-			value.style.cssText = 'font-weight: 600; color: var(--interactive-accent);';
+			value.textContent = `${stat.count} books, ${stat.pages.toLocaleString()} pages`;
+			value.style.cssText = 'font-size: 14px; color: var(--text-muted);';
 
-			item.appendChild(label);
+			item.appendChild(leftContainer);
 			item.appendChild(value);
 			list.appendChild(item);
 		});
 
 		section.appendChild(title);
 		section.appendChild(chartContainer);
+		section.appendChild(barChartContainer);
 		section.appendChild(list);
 		container.appendChild(section);
 	}
@@ -437,6 +532,135 @@ export class StatisticsBasesView extends BasesViewBase {
 		container.appendChild(svg);
 	}
 
+	/**
+	 * Render a line chart showing variation over time
+	 */
+	private renderLineChart(
+		container: HTMLElement, 
+		doc: Document, 
+		data: Array<{ label: string; value: number; change?: number; changePercent?: number }>,
+		xAxisLabel: string
+	): void {
+		if (data.length === 0) return;
+
+		// Reverse data to show chronological order (oldest to newest)
+		const reversedData = [...data].reverse();
+		const maxValue = Math.max(...reversedData.map(d => d.value), 1);
+		const chartHeight = 200;
+		const chartWidth = container.clientWidth || 600;
+		const padding = 40;
+		const plotWidth = chartWidth - padding * 2;
+		const plotHeight = chartHeight - padding * 2;
+
+		const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+		svg.setAttribute('width', '100%');
+		svg.setAttribute('height', `${chartHeight}px`);
+		svg.style.cssText = 'display: block;';
+
+		// Calculate points for line
+		const points: string[] = [];
+		reversedData.forEach((item, index) => {
+			const x = padding + (index / (reversedData.length - 1 || 1)) * plotWidth;
+			const y = padding + plotHeight - (item.value / maxValue) * plotHeight;
+			points.push(`${x},${y}`);
+		});
+
+		// Draw line
+		if (points.length > 1) {
+			const path = doc.createElementNS('http://www.w3.org/2000/svg', 'path');
+			path.setAttribute('d', `M ${points.join(' L ')}`);
+			path.setAttribute('fill', 'none');
+			path.setAttribute('stroke', 'var(--interactive-accent)');
+			path.setAttribute('stroke-width', '2');
+			path.setAttribute('stroke-linecap', 'round');
+			path.setAttribute('stroke-linejoin', 'round');
+			svg.appendChild(path);
+		}
+
+		// Draw points and change indicators
+		reversedData.forEach((item, index) => {
+			const x = padding + (index / (reversedData.length - 1 || 1)) * plotWidth;
+			const y = padding + plotHeight - (item.value / maxValue) * plotHeight;
+
+			// Point circle
+			const circle = doc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+			circle.setAttribute('cx', x.toString());
+			circle.setAttribute('cy', y.toString());
+			circle.setAttribute('r', '4');
+			circle.setAttribute('fill', 'var(--interactive-accent)');
+			svg.appendChild(circle);
+
+			// Value label
+			if (item.value > 0) {
+				const text = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+				text.setAttribute('x', x.toString());
+				text.setAttribute('y', (y - 10).toString());
+				text.setAttribute('text-anchor', 'middle');
+				text.setAttribute('font-size', '11');
+				text.setAttribute('fill', 'var(--text-normal)');
+				text.setAttribute('font-weight', '600');
+				text.textContent = item.value.toString();
+				svg.appendChild(text);
+			}
+
+			// Change indicator (arrow)
+			if (item.change !== undefined && item.change !== 0) {
+				const isPositive = item.change > 0;
+				const arrowY = y - 20;
+				const arrowPath = doc.createElementNS('http://www.w3.org/2000/svg', 'path');
+				if (isPositive) {
+					// Up arrow
+					arrowPath.setAttribute('d', `M ${x} ${arrowY} L ${x - 4} ${arrowY + 6} L ${x + 4} ${arrowY + 6} Z`);
+				} else {
+					// Down arrow
+					arrowPath.setAttribute('d', `M ${x} ${arrowY + 6} L ${x - 4} ${arrowY} L ${x + 4} ${arrowY} Z`);
+				}
+				arrowPath.setAttribute('fill', isPositive ? 'var(--interactive-success)' : 'var(--text-error)');
+				svg.appendChild(arrowPath);
+			}
+
+			// X-axis label
+			const label = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+			label.setAttribute('x', x.toString());
+			label.setAttribute('y', (chartHeight - 10).toString());
+			label.setAttribute('text-anchor', 'middle');
+			label.setAttribute('font-size', '9');
+			label.setAttribute('fill', 'var(--text-muted)');
+			label.textContent = item.label.length > 8 ? item.label.substring(0, 8) + '...' : item.label;
+			svg.appendChild(label);
+		});
+
+		// Y-axis (value scale)
+		const yAxisSteps = 5;
+		for (let i = 0; i <= yAxisSteps; i++) {
+			const value = (maxValue / yAxisSteps) * i;
+			const y = padding + plotHeight - (i / yAxisSteps) * plotHeight;
+
+			// Grid line
+			const gridLine = doc.createElementNS('http://www.w3.org/2000/svg', 'line');
+			gridLine.setAttribute('x1', padding.toString());
+			gridLine.setAttribute('y1', y.toString());
+			gridLine.setAttribute('x2', (padding + plotWidth).toString());
+			gridLine.setAttribute('y2', y.toString());
+			gridLine.setAttribute('stroke', 'var(--background-modifier-border)');
+			gridLine.setAttribute('stroke-width', '1');
+			gridLine.setAttribute('stroke-dasharray', '2,2');
+			svg.insertBefore(gridLine, svg.firstChild);
+
+			// Y-axis label
+			const yLabel = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+			yLabel.setAttribute('x', (padding - 5).toString());
+			yLabel.setAttribute('y', (y + 4).toString());
+			yLabel.setAttribute('text-anchor', 'end');
+			yLabel.setAttribute('font-size', '9');
+			yLabel.setAttribute('fill', 'var(--text-muted)');
+			yLabel.textContent = Math.round(value).toString();
+			svg.insertBefore(yLabel, svg.firstChild);
+		}
+
+		container.appendChild(svg);
+	}
+
 	private renderReadingDays(container: HTMLElement, doc: Document): void {
 		const section = doc.createElement('div');
 		section.style.cssText = 'margin-bottom: 24px; padding: 16px; background: var(--background-secondary); border-radius: 8px;';
@@ -455,8 +679,3 @@ export class StatisticsBasesView extends BasesViewBase {
 	}
 }
 
-export function buildStatisticsViewFactory(plugin: BookshelfPlugin) {
-	return (controller: any, containerEl: HTMLElement) => {
-		return new StatisticsBasesView(controller, containerEl, plugin);
-	};
-}

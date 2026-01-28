@@ -1,22 +1,14 @@
 import { TFile } from 'obsidian';
-import { Book, BookStatus } from '../models/book';
-import { BasesViewBase } from './BasesViewBase';
-import { BookCard } from '../views/bookCard';
-import { FileManagerUtils } from '../utils/fileManagerUtils';
-import BookshelfPlugin from '../main';
+import { Book } from '../../models/book';
+import { BookStatus } from '../../models/bookStatus';
+import { BasesViewBase } from './basesViewBase';
+import { BookCard } from '../bookCard';
+import { BookFileReader } from '../../services/bookFileService/bookFileReader';
+import { BookFileUpdater } from '../../services/bookFileService/bookFileUpdater';
+import BookshelfPlugin from '../../main';
 
 /**
  * Build factory function for Bookshelf View
- */
-export function buildBookshelfViewFactory(plugin: BookshelfPlugin) {
-	return (controller: any, containerEl: HTMLElement) => {
-		return new BookshelfBasesView(controller, containerEl, plugin);
-	};
-}
-
-/**
- * Bookshelf View - Bases-based view for displaying all books
- * Displays books in order: Reading (1), Unread (2), Finished (3)
  */
 export class BookshelfBasesView extends BasesViewBase {
 	type = "bookshelfView";
@@ -235,19 +227,19 @@ export class BookshelfBasesView extends BasesViewBase {
 				return;
 			}
 
-			const fileManager = new FileManagerUtils(app);
+			const bookFileReader = new BookFileReader(app);
+			const bookFileUpdater = new BookFileUpdater(app);
 			const updates: Partial<Book> = { status: newStatus };
 
-			// If changing to reading, set read_started if not set
 			if (newStatus === 'reading') {
-				const bookData = await fileManager.getBookFromFile(file);
+				const bookData = await bookFileReader.read(file);
 				if (!bookData.readStarted) {
-					const { getCurrentDateTime } = await import('../utils/dateUtils');
+					const { getCurrentDateTime } = await import('../../utils/dateUtils');
 					updates.readStarted = getCurrentDateTime();
 				}
 			}
 
-			await fileManager.updateBookNote(file, updates);
+			await bookFileUpdater.updateBook(file, updates);
 
 			// Refresh the view
 			setTimeout(() => {
@@ -423,7 +415,7 @@ export class BookshelfBasesView extends BasesViewBase {
 		header.appendChild(titleEl);
 
 		const chevron = doc.createElement('span');
-		chevron.textContent = '▴';
+		chevron.textContent = '?';
 		chevron.style.cssText = 'font-size: 10px; color: var(--text-muted); transition: transform 0.2s;';
 		header.appendChild(chevron);
 
@@ -607,7 +599,7 @@ export class BookshelfBasesView extends BasesViewBase {
 				return;
 			}
 			try {
-				const { SearchModal } = await import('../views/searchModal');
+				const { SearchModal } = await import('../bookSearchModal');
 				const modal = new SearchModal(app, this.plugin);
 				modal.open();
 			} catch (error) {

@@ -1,8 +1,9 @@
 import { Component, App, TFile, setIcon } from "obsidian";
-import BookshelfPlugin from "../main";
-import { BasesDataAdapter } from "./BasesDataAdapter";
-import { Book } from "../models/book";
-import { FileManagerUtils } from "../utils/fileManagerUtils";
+import BookshelfPlugin from "../../main";
+import { BasesDataAdapter } from "./basesDataAdapter";
+import { Book } from "../../models/book";
+import { BookFileReader } from "../../services/bookFileService/bookFileReader";
+import { BookFileUpdater } from "../../services/bookFileService/bookFileUpdater";
 
 /**
  * Abstract base class for all Bookshelf Bases views.
@@ -17,7 +18,8 @@ export abstract class BasesViewBase extends Component {
 	protected dataAdapter: BasesDataAdapter;
 	protected containerEl: HTMLElement;
 	protected rootElement: HTMLElement | null = null;
-	protected fileManager: FileManagerUtils;
+	protected bookFileReader: BookFileReader;
+	protected bookFileUpdater: BookFileUpdater;
 	protected updateDebounceTimer: number | null = null;
 	protected dataUpdateDebounceTimer: number | null = null;
 
@@ -27,7 +29,8 @@ export abstract class BasesViewBase extends Component {
 		this.plugin = plugin;
 		this.containerEl = containerEl;
 		// Use plugin.app since this.app may not be set yet (Bases sets it later)
-		this.fileManager = new FileManagerUtils(plugin.app);
+		this.bookFileReader = new BookFileReader(plugin.app);
+		this.bookFileUpdater = new BookFileUpdater(plugin.app);
 
 		// Note: app, config, and data will be set by Bases when it creates the view
 		// We just need to ensure our types match the BasesView interface
@@ -237,7 +240,7 @@ export abstract class BasesViewBase extends Component {
 			}
 			
 			try {
-				const { SearchModal } = await import("../views/searchModal");
+				const { SearchModal } = await import("../bookSearchModal");
 				console.log("[Bookshelf][Bases] SearchModal imported successfully");
 				const modal = new SearchModal(app, this.plugin);
 				console.log("[Bookshelf][Bases] SearchModal created, opening...");
@@ -270,7 +273,7 @@ export abstract class BasesViewBase extends Component {
 					return;
 				}
 				try {
-					const { SearchModal } = await import("../views/searchModal");
+					const { SearchModal } = await import("../bookSearchModal");
 					const modal = new SearchModal(app, this.plugin);
 					modal.open();
 				} catch (error) {
@@ -318,7 +321,7 @@ export abstract class BasesViewBase extends Component {
 				}
 
 				// Load book data from file
-				const bookData = await this.fileManager.getBookFromFile(vaultFile);
+				const bookData = await this.bookFileReader.read(vaultFile);
 				if (bookData.title) {
 				// Get reading history summary from frontmatter (for statistics)
 				// This is faster than parsing body and contains essential data
@@ -326,8 +329,8 @@ export abstract class BasesViewBase extends Component {
 				let totalPagesReadFromHistory: number | undefined;
 				try {
 					const content = await app.vault.read(vaultFile);
-					const frontmatterProcessor = (this.fileManager as any).frontmatterProcessor;
-					const { frontmatter } = frontmatterProcessor.extractFrontmatter(content);
+					const { FrontmatterParser } = await import('../../services/frontmatterService/frontmatterParser');
+					const { frontmatter } = FrontmatterParser.extract(content);
 					
 					// Use reading_history_summary from frontmatter (for statistics)
 					const historySummary = frontmatter.reading_history_summary;

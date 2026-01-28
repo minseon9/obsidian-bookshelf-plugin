@@ -1,7 +1,7 @@
 import { TFile } from 'obsidian';
-import { Book } from '../models/book';
-import { BasesViewBase } from './BasesViewBase';
-import BookshelfPlugin from '../main';
+import { Book } from '../../models/book';
+import { BasesViewBase } from './basesViewBase';
+import BookshelfPlugin from '../../main';
 
 /**
  * Library View - Displays unread and finished books in list format
@@ -213,8 +213,3 @@ export class LibraryBasesView extends BasesViewBase {
 	}
 }
 
-export function buildLibraryViewFactory(plugin: BookshelfPlugin) {
-	return (controller: any, containerEl: HTMLElement) => {
-		return new LibraryBasesView(controller, containerEl, plugin);
-	};
-}
