@@ -13,11 +13,8 @@ export class BookshelfView extends ItemView {
 	private books: Array<{ book: Book; file: TFile }> = [];
 	private currentFilter: BookStatus | 'all' = 'all';
 	private currentSort: 'date' | 'title' | 'author' | 'progress' = 'date';
-	private layout: 'grid' | 'list' = 'grid';
-
 	async onOpen() {
-		// Load settings for default layout and sort
-		this.layout = this.plugin.settings.viewLayout || 'grid';
+		// Load settings for default sort
 		this.currentSort = this.plugin.settings.defaultSort || 'date';
 		
 		await this.loadBooks();
@@ -153,34 +150,9 @@ export class BookshelfView extends ItemView {
 			this.render();
 		});
 
-		// Layout toggle
-		const layoutContainer = header.createEl('div', {
-			cls: 'bookshelf-layout-toggle',
-		});
-
-		const gridButton = layoutContainer.createEl('button', {
-			cls: this.layout === 'grid' ? 'mod-cta' : '',
-			text: 'Grid',
-		});
-
-		const listButton = layoutContainer.createEl('button', {
-			cls: this.layout === 'list' ? 'mod-cta' : '',
-			text: 'List',
-		});
-
-		gridButton.addEventListener('click', () => {
-			this.layout = 'grid';
-			this.render();
-		});
-
-		listButton.addEventListener('click', () => {
-			this.layout = 'list';
-			this.render();
-		});
-
-		// Books container
+		// Books container (layout determined by book status)
 		const booksContainer = container.createEl('div', {
-			cls: `bookshelf-books-container bookshelf-layout-${this.layout}`,
+			cls: 'bookshelf-books-container',
 		});
 
 		// Filter and sort books
@@ -225,9 +197,20 @@ export class BookshelfView extends ItemView {
 				text: `No ${this.currentFilter === 'all' ? '' : this.currentFilter} books found.`,
 			});
 		} else {
+			// Determine layout based on filter: reading = grid, others = list
+			const useGrid = this.currentFilter === 'reading' || (this.currentFilter === 'all' && filteredBooks.some(({ book }) => book.status === 'reading'));
+			
+			if (useGrid) {
+				booksContainer.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;';
+			} else {
+				booksContainer.style.cssText = 'display: flex; flex-direction: column; gap: 12px;';
+			}
+			
 			filteredBooks.forEach(({ book, file }) => {
 				const bookCard = new BookCard(this.app, book, file, this.plugin);
-				const cardElement = bookCard.render(this.layout);
+				// Reading books always grid, others always list
+				const layout = book.status === 'reading' ? 'grid' : 'list';
+				const cardElement = bookCard.render(layout);
 				booksContainer.appendChild(cardElement);
 			});
 		}
@@ -243,7 +226,7 @@ export class BookshelfView extends ItemView {
 
 		emptyState.createEl('div', {
 			cls: 'bookshelf-empty-icon',
-			text: '??',
+			text: '📚',
 		});
 
 		emptyState.createEl('h2', {
