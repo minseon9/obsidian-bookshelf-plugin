@@ -7,20 +7,12 @@ import BookshelfPlugin from "./main";
 export interface BookshelfSettings {
 	// Folder settings
 	bookFolder: string; // Base folder (e.g., "Bookshelf")
-	templateFile: string;
-	coverImageFolder?: string;
 
 	// API settings
 	apiTimeout: number;
 	searchResultLimit: number;
 
-	// UI settings
-	showCoverImages: boolean;
-	coverImageSize: 'S' | 'M' | 'L';
-	saveCoverLocally: boolean;
-
 	// Bookshelf View settings
-	viewLayout: 'grid' | 'list';
 	defaultSort: 'date' | 'title' | 'author' | 'progress';
 
 	// Auto update
@@ -41,14 +33,8 @@ export interface BookshelfSettings {
  */
 export const DEFAULT_SETTINGS: BookshelfSettings = {
 	bookFolder: 'Bookshelf',
-	templateFile: 'template_example.md',
-	coverImageFolder: '',
 	apiTimeout: 5000,
 	searchResultLimit: 20,
-	showCoverImages: true,
-	coverImageSize: 'M',
-	saveCoverLocally: false,
-	viewLayout: 'grid',
 	defaultSort: 'date',
 	autoUpdateTimestamp: true,
 	autoStatusChange: true,
@@ -90,17 +76,6 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		new Setting(containerEl)
-			.setName('Template file path')
-			.setDesc('Path to the template file used for creating book notes')
-			.addText(text => text
-				.setPlaceholder('template_example.md')
-				.setValue(this.plugin.settings.templateFile)
-				.onChange(async (value) => {
-					this.plugin.settings.templateFile = value;
-					await this.plugin.saveSettings();
-				}));
-
 		// API settings
 		containerEl.createEl('h3', { text: 'API Settings' });
 
@@ -132,52 +107,6 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		// Image settings
-		containerEl.createEl('h3', { text: 'Image Settings' });
-
-		new Setting(containerEl)
-			.setName('Show cover images')
-			.setDesc('Whether to display book cover images')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showCoverImages)
-				.onChange(async (value) => {
-					this.plugin.settings.showCoverImages = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Image size')
-			.setDesc('Cover image size (S: Small, M: Medium, L: Large)')
-			.addDropdown(dropdown => dropdown
-				.addOption('S', 'Small (S)')
-				.addOption('M', 'Medium (M)')
-				.addOption('L', 'Large (L)')
-				.setValue(this.plugin.settings.coverImageSize)
-				.onChange(async (value) => {
-					this.plugin.settings.coverImageSize = value as 'S' | 'M' | 'L';
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Save cover images locally')
-			.setDesc('Whether to download and save cover images locally')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.saveCoverLocally)
-				.onChange(async (value) => {
-					this.plugin.settings.saveCoverLocally = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Cover image folder')
-			.setDesc('Folder path for locally saved cover images (only used if "Save cover images locally" is enabled)')
-			.addText(text => text
-				.setPlaceholder('Bookshelf/.bookshelf/covers')
-				.setValue(this.plugin.settings.coverImageFolder || '')
-				.onChange(async (value) => {
-					this.plugin.settings.coverImageFolder = value;
-					await this.plugin.saveSettings();
-				}));
 
 		// Auto update settings
 		containerEl.createEl('h3', { text: 'Auto Update' });
@@ -243,18 +172,6 @@ export class BookshelfSettingTab extends PluginSettingTab {
 		containerEl.createEl('h3', { text: 'Bookshelf View' });
 
 		new Setting(containerEl)
-			.setName('Default layout')
-			.setDesc('Default layout for Bookshelf View')
-			.addDropdown(dropdown => dropdown
-				.addOption('grid', 'Grid')
-				.addOption('list', 'List')
-				.setValue(this.plugin.settings.viewLayout)
-				.onChange(async (value) => {
-					this.plugin.settings.viewLayout = value as 'grid' | 'list';
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
 			.setName('Default sort')
 			.setDesc('Default sort order for Bookshelf View')
 			.addDropdown(dropdown => dropdown
@@ -282,5 +199,6 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					this.plugin.settings.defaultStatus = value as 'unread' | 'reading';
 					await this.plugin.saveSettings();
 				}));
+
 	}
 }
