@@ -781,9 +781,9 @@ export class StatisticsBasesView extends BasesViewBase {
 			.sort((a, b) => b[1] - a[1])
 			.slice(0, 10);
 
-		// Always show chart container in grid format (matching time-based stats)
+		// Always show chart container with wider width to fit 10 bars comfortably
 		const chartContainer = doc.createElement('div');
-		chartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border); max-width: calc(33.333% - 11px);';
+		chartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border); max-width: 600px;';
 		
 		const chartTitle = doc.createElement('h3');
 		chartTitle.textContent = 'Books by category (Top 10)';
@@ -816,7 +816,9 @@ export class StatisticsBasesView extends BasesViewBase {
 
 		const maxValue = Math.max(...data.map(d => d.value), 1);
 		const chartHeight = 180;
-		const barWidth = Math.max(20, (container.clientWidth || 400) / data.length - 10);
+		// Fixed bar width for consistent appearance, with spacing
+		const barWidth = 40;
+		const barSpacing = 12;
 
 		const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
 		svg.setAttribute('width', '100%');
@@ -825,7 +827,7 @@ export class StatisticsBasesView extends BasesViewBase {
 
 		data.forEach((item, index) => {
 			const barHeight = (item.value / maxValue) * (chartHeight - 40);
-			const x = index * (barWidth + 10) + 5;
+			const x = index * (barWidth + barSpacing) + 10;
 			const y = chartHeight - barHeight - 20;
 
 			// Bar
