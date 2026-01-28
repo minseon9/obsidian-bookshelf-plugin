@@ -1,10 +1,17 @@
-import { Plugin, MarkdownView, TFile, TAbstractFile } from 'obsidian';
+import { Plugin, MarkdownView, TFile, TAbstractFile, normalizePath } from 'obsidian';
 import { DEFAULT_SETTINGS, BookshelfSettings, BookshelfSettingTab } from "./settings";
 import { registerCommands } from "./commands";
 import { FileManagerUtils } from "./utils/fileManagerUtils";
 import { BookshelfView } from "./views/bookshelfView";
 import { SearchModal } from "./views/searchModal";
 import { ProgressUpdateModal } from "./views/progressModal";
+import { getCurrentDateTime } from "./utils/dateUtils";
+import { registerBasesBookshelfView, unregisterBasesViews } from "./bases/registration";
+import { 
+	generateBookshelfBaseFile,
+	generateLibraryBaseFile,
+	generateStatisticsBaseFile
+} from "./bases/defaultBasesFiles";
 
 export default class BookshelfPlugin extends Plugin {
 	settings: BookshelfSettings;
@@ -14,13 +21,18 @@ export default class BookshelfPlugin extends Plugin {
 
 		// Ensure default folders exist
 		const fileManager = new FileManagerUtils(this.app);
-		await fileManager.ensureFolder(this.settings.bookFolder);
-		await fileManager.ensureFolder(fileManager.getBooksFolderPath(this.settings.bookFolder));
-		await fileManager.ensureFolder(fileManager.getInteractionFolderPath(this.settings.bookFolder));
-		await fileManager.ensureFolder(fileManager.getShelfFolderPath(this.settings.bookFolder));
-		
-		// Create base view file if it doesn't exist
-		await fileManager.ensureBaseViewFile(this.settings.bookFolder);
+		try {
+			await fileManager.ensureFolder(this.settings.bookFolder);
+			await fileManager.ensureFolder(fileManager.getBooksFolderPath(this.settings.bookFolder));
+			await fileManager.ensureFolder(fileManager.getInteractionFolderPath(this.settings.bookFolder));
+			await fileManager.ensureFolder(fileManager.getViewsFolderPath(this.settings.bookFolder));
+			
+			// Create default .base files if they don't exist
+			await this.ensureDefaultBaseFiles();
+		} catch (error) {
+			console.error('Failed to initialize Bookshelf folders:', error);
+			// Continue plugin loading even if folder creation fails
+		}
 
 		// Add settings tab
 		this.addSettingTab(new BookshelfSettingTab(this.app, this));
@@ -28,8 +40,11 @@ export default class BookshelfPlugin extends Plugin {
 		// Register commands
 		registerCommands(this.app, this);
 
-		// Register view
+		// Register legacy ItemView (for backward compatibility)
 		this.registerView('bookshelf-view', (leaf) => new BookshelfView(leaf, this));
+
+		// Register Bases views
+		await registerBasesBookshelfView(this);
 
 		// Add command to open view
 		this.addCommand({
@@ -41,11 +56,11 @@ export default class BookshelfPlugin extends Plugin {
 		});
 
 		// Add Ribbon icons (Left Navigation Bar)
-		this.addRibbonIcon('book-open', 'Open Bookshelf', () => {
+		this.addRibbonIcon('book-open-text', 'Open Bookshelf', () => {
 			this.activateView();
 		});
 
-		this.addRibbonIcon('plus-circle', 'Search and Add Book', () => {
+		this.addRibbonIcon('book-plus', 'Search and Add Book', () => {
 			const modal = new SearchModal(this.app, this);
 			modal.open();
 		});
@@ -134,6 +149,7 @@ export default class BookshelfPlugin extends Plugin {
 
 	async onunload() {
 		this.app.workspace.detachLeavesOfType('bookshelf-view');
+		unregisterBasesViews(this);
 	}
 
 	/**
@@ -167,7 +183,6 @@ export default class BookshelfPlugin extends Plugin {
 					}
 
 					// Update timestamp
-					const { getCurrentDateTime } = require('./utils/dateUtils');
 					frontmatter.updated = getCurrentDateTime();
 
 					// Reconstruct content
@@ -188,7 +203,21 @@ export default class BookshelfPlugin extends Plugin {
 
 	async activateView() {
 		const { workspace } = this.app;
+		const fileManager = new FileManagerUtils(this.app);
+		const viewsFolder = fileManager.getViewsFolderPath(this.settings.bookFolder);
+		const baseFilePath = normalizePath(`${viewsFolder}/bookshelf-default.base`);
 
+		// Try to open Bases view first
+		const baseFile = this.app.vault.getAbstractFileByPath(baseFilePath);
+		if (baseFile && baseFile instanceof TFile) {
+			// Open the .base file in a new leaf
+			const leaf = workspace.getRightLeaf(false) || workspace.getLeaf(true);
+			await leaf.openFile(baseFile);
+			workspace.revealLeaf(leaf);
+			return;
+		}
+
+		// Fallback to legacy ItemView
 		let leaf = workspace.getLeavesOfType('bookshelf-view')[0];
 		if (!leaf) {
 			const rightLeaf = workspace.getRightLeaf(false);
@@ -200,6 +229,34 @@ export default class BookshelfPlugin extends Plugin {
 
 		if (leaf) {
 			workspace.revealLeaf(leaf);
+		}
+	}
+
+	/**
+	 * Ensure default .base files exist
+	 */
+	private async ensureDefaultBaseFiles(): Promise<void> {
+		const fileManager = new FileManagerUtils(this.app);
+		const viewsFolder = fileManager.getViewsFolderPath(this.settings.bookFolder);
+
+		// Create all default .base files
+		const baseFiles = [
+			{ path: `${viewsFolder}/bookshelf-default.base`, generator: generateBookshelfBaseFile },
+			{ path: `${viewsFolder}/library.base`, generator: generateLibraryBaseFile },
+			{ path: `${viewsFolder}/statistics.base`, generator: generateStatisticsBaseFile },
+		];
+
+		for (const { path, generator } of baseFiles) {
+			const filePath = normalizePath(path);
+			const existingFile = this.app.vault.getAbstractFileByPath(filePath);
+			if (!existingFile) {
+				try {
+					const content = generator(this.settings);
+					await this.app.vault.create(filePath, content);
+				} catch (error) {
+					console.error(`[Bookshelf] Failed to create ${filePath}:`, error);
+				}
+			}
 		}
 	}
 
