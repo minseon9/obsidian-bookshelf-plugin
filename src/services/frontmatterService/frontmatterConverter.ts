@@ -3,6 +3,9 @@ import { getCurrentDateTime } from '../../utils/dateUtils';
 
 export class FrontmatterConverter {
 	static bookToFrontmatter(book: Book): Record<string, any> {
+		const now = getCurrentDateTime();
+		const created = book.created || now;
+		
 		const frontmatter: Record<string, any> = {
 			title: book.title || '',
 			subtitle: book.subtitle || '',
@@ -15,10 +18,10 @@ export class FrontmatterConverter {
 			total: 0,
 			status: book.status || 'unread',
 			read_page: book.readPage || 0,
-			read_started: book.readStarted || '',
+			read_started: book.readStarted || created,
 			read_finished: book.readFinished || '',
-			created: book.created || getCurrentDateTime(),
-			updated: book.updated || getCurrentDateTime(),
+			created: created,
+			updated: book.updated || now,
 		};
 
 		// Set total pages

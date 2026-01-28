@@ -305,36 +305,455 @@ export class StatisticsBasesView extends BasesViewBase {
 		// Title
 		const title = doc.createElement('h1');
 		title.textContent = 'Reading statistics';
-		title.style.cssText = 'margin: 0 0 24px 0; font-size: 1.8em;';
+		title.style.cssText = 'margin: 0 0 32px 0; font-size: 1.8em;';
 		container.appendChild(title);
 
-		// Overview cards (full width)
-		this.renderOverviewCards(container, doc);
+		// Section 1: Overall Statistics
+		this.renderOverallSection(container, doc);
 
-		// Grid row 1: Total statistics (2 columns)
-		const gridRow1 = doc.createElement('div');
-		gridRow1.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px;';
-		
-		const avgTimeContainer = doc.createElement('div');
-		this.renderAverageTime(avgTimeContainer, doc);
-		gridRow1.appendChild(avgTimeContainer);
+		// Section 2: Yearly/Monthly Statistics
+		this.renderTimeBasedSection(container, doc);
 
-		const readingDaysContainer = doc.createElement('div');
-		this.renderReadingDays(readingDaysContainer, doc);
-		gridRow1.appendChild(readingDaysContainer);
-
-		container.appendChild(gridRow1);
-
-		// Category breakdown (full width)
-		this.renderCategoryBreakdown(container, doc);
-
-		// Yearly statistics (full width)
-		this.renderYearlyStats(container, doc);
-
-		// Monthly statistics (full width)
-		this.renderMonthlyStats(container, doc);
+		// Section 3: Category Statistics
+		this.renderCategorySection(container, doc);
 
 		this.rootElement.appendChild(container);
+	}
+
+	private renderOverallSection(container: HTMLElement, doc: Document): void {
+		const section = doc.createElement('div');
+		section.style.cssText = 'margin-bottom: 40px;';
+
+		// Section header
+		const header = doc.createElement('h2');
+		header.textContent = 'Overall statistics';
+		header.style.cssText = 'margin: 0 0 16px 0; font-size: 1.4em; padding-bottom: 8px; border-bottom: 2px solid var(--background-modifier-border);';
+		section.appendChild(header);
+
+		// Grid: 3 cards in a row
+		const cardsGrid = doc.createElement('div');
+		cardsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 16px;';
+
+		const cards = [
+			{ label: 'Total finished books', value: this.stats!.finished, color: 'var(--interactive-success)' },
+			{ label: 'Total pages read', value: this.stats!.readPages.toLocaleString(), color: 'var(--interactive-accent)' },
+			{ label: 'Total reading days', value: this.stats!.totalReadingDays, color: 'var(--text-accent)' },
+		];
+
+		cards.forEach(card => {
+			const cardEl = doc.createElement('div');
+			cardEl.style.cssText = 'padding: 20px; border-radius: 8px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border);';
+
+			const label = doc.createElement('div');
+			label.textContent = card.label;
+			label.style.cssText = 'font-size: 12px; color: var(--text-muted); margin-bottom: 8px;';
+
+			const value = doc.createElement('div');
+			value.textContent = card.value.toString();
+			value.style.cssText = `font-size: 28px; font-weight: 600; color: ${card.color};`;
+
+			cardEl.appendChild(label);
+			cardEl.appendChild(value);
+			cardsGrid.appendChild(cardEl);
+		});
+
+		section.appendChild(cardsGrid);
+
+		// Average time card (below)
+		const avgTimeEl = doc.createElement('div');
+		avgTimeEl.style.cssText = 'padding: 20px; border-radius: 8px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border);';
+		
+		const avgTitle = doc.createElement('div');
+		avgTitle.textContent = 'Average days to finish';
+		avgTitle.style.cssText = 'font-size: 12px; color: var(--text-muted); margin-bottom: 4px;';
+		
+		const avgDesc = doc.createElement('div');
+		avgDesc.textContent = 'Average number of reading sessions to complete a book';
+		avgDesc.style.cssText = 'font-size: 10px; color: var(--text-faint); margin-bottom: 8px;';
+		
+		const avgValue = doc.createElement('div');
+		avgValue.textContent = this.stats!.averageTimeToFinish > 0 
+			? `${this.stats!.averageTimeToFinish} sessions`
+			: 'No data available';
+		avgValue.style.cssText = 'font-size: 28px; font-weight: 600; color: var(--interactive-accent);';
+		
+		avgTimeEl.appendChild(avgTitle);
+		avgTimeEl.appendChild(avgDesc);
+		avgTimeEl.appendChild(avgValue);
+		section.appendChild(avgTimeEl);
+
+		container.appendChild(section);
+	}
+
+	private renderTimeBasedSection(container: HTMLElement, doc: Document): void {
+		const section = doc.createElement('div');
+		section.style.cssText = 'margin-bottom: 40px;';
+
+		// Section header
+		const header = doc.createElement('h2');
+		header.textContent = 'Time-based statistics';
+		header.style.cssText = 'margin: 0 0 16px 0; font-size: 1.4em; padding-bottom: 8px; border-bottom: 2px solid var(--background-modifier-border);';
+		section.appendChild(header);
+
+		// Dropdown selector
+		const selectorContainer = doc.createElement('div');
+		selectorContainer.style.cssText = 'margin-bottom: 16px;';
+
+		const select = doc.createElement('select');
+		select.style.cssText = 'padding: 8px 12px; border-radius: 6px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); color: var(--text-normal); font-size: 14px; cursor: pointer;';
+		
+		const yearOption = doc.createElement('option');
+		yearOption.value = 'year';
+		yearOption.textContent = 'Yearly';
+		select.appendChild(yearOption);
+
+		const monthOption = doc.createElement('option');
+		monthOption.value = 'month';
+		monthOption.textContent = 'Monthly';
+		select.appendChild(monthOption);
+
+		selectorContainer.appendChild(select);
+		section.appendChild(selectorContainer);
+
+		// Content container
+		const contentContainer = doc.createElement('div');
+		contentContainer.style.cssText = 'position: relative;';
+
+		// Render yearly by default
+		this.renderYearlyContent(contentContainer, doc);
+
+		select.addEventListener('change', () => {
+			contentContainer.empty();
+			if (select.value === 'year') {
+				this.renderYearlyContent(contentContainer, doc);
+			} else {
+				this.renderMonthlyContent(contentContainer, doc);
+			}
+		});
+
+		section.appendChild(contentContainer);
+		container.appendChild(section);
+	}
+
+	private renderYearlyContent(container: HTMLElement, doc: Document): void {
+		const years = Object.keys(this.stats!.yearlyStats).sort().reverse();
+		
+		if (years.length === 0) {
+			const emptyState = doc.createElement('div');
+			emptyState.style.cssText = 'display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--text-muted);';
+			
+			const emptyIcon = doc.createElement('div');
+			emptyIcon.textContent = '??';
+			emptyIcon.style.cssText = 'font-size: 48px; margin-bottom: 16px; opacity: 0.5;';
+			
+			const emptyText = doc.createElement('div');
+			emptyText.textContent = 'No yearly data available';
+			emptyText.style.cssText = 'font-size: 14px;';
+			
+			emptyState.appendChild(emptyIcon);
+			emptyState.appendChild(emptyText);
+			container.appendChild(emptyState);
+			return;
+		}
+
+		// Grid: charts in 2-3 columns
+		const chartsGrid = doc.createElement('div');
+		chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px; margin-bottom: 16px;';
+
+		// Line chart
+		const lineChartContainer = doc.createElement('div');
+		lineChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		
+		const lineTitle = doc.createElement('h3');
+		lineTitle.textContent = 'Books trend';
+		lineTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		lineChartContainer.appendChild(lineTitle);
+
+		const lineChart = doc.createElement('div');
+		lineChart.style.cssText = 'height: 200px; position: relative;';
+		this.renderLineChart(lineChart, doc, years.map(year => {
+			const stat = this.stats!.yearlyStats[year];
+			return {
+				label: year,
+				value: stat ? stat.count : 0,
+				change: stat?.change,
+				changePercent: stat?.changePercent,
+			};
+		}), 'Year');
+		lineChartContainer.appendChild(lineChart);
+		chartsGrid.appendChild(lineChartContainer);
+
+		// Bar chart
+		const barChartContainer = doc.createElement('div');
+		barChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		
+		const barTitle = doc.createElement('h3');
+		barTitle.textContent = 'Books comparison';
+		barTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		barChartContainer.appendChild(barTitle);
+
+		const barChart = doc.createElement('div');
+		barChart.style.cssText = 'height: 200px; position: relative;';
+		this.renderBarChart(barChart, doc, years.map(year => {
+			const stat = this.stats!.yearlyStats[year];
+			return {
+				label: year,
+				value: stat ? stat.count : 0,
+			};
+		}));
+		barChartContainer.appendChild(barChart);
+		chartsGrid.appendChild(barChartContainer);
+
+		container.appendChild(chartsGrid);
+
+		// Details list
+		const list = doc.createElement('div');
+		list.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		
+		const listTitle = doc.createElement('h3');
+		listTitle.textContent = 'Details';
+		listTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		list.appendChild(listTitle);
+
+		years.forEach(year => {
+			const stat = this.stats!.yearlyStats[year];
+			if (!stat) return;
+			
+			const item = doc.createElement('div');
+			item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--background-modifier-border);';
+
+			const leftContainer = doc.createElement('div');
+			leftContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
+
+			const label = doc.createElement('span');
+			label.textContent = year;
+			label.style.cssText = 'font-size: 14px; font-weight: 600;';
+			leftContainer.appendChild(label);
+
+			if (stat.change !== undefined && stat.changePercent !== undefined) {
+				const changeEl = doc.createElement('span');
+				const isPositive = stat.change >= 0;
+				const changeText = isPositive ? `+${stat.change}` : `${stat.change}`;
+				const percentText = isPositive ? `+${stat.changePercent}%` : `${stat.changePercent}%`;
+				changeEl.textContent = `${changeText} (${percentText})`;
+				changeEl.style.cssText = `font-size: 11px; color: ${isPositive ? 'var(--interactive-success)' : 'var(--text-error)'};`;
+				leftContainer.appendChild(changeEl);
+			}
+
+			const rightContainer = doc.createElement('div');
+			rightContainer.style.cssText = 'display: flex; flex-direction: column; gap: 2px; align-items: flex-end;';
+
+			const booksPages = doc.createElement('span');
+			booksPages.textContent = `${stat.count} books, ${stat.pages.toLocaleString()} pages`;
+			booksPages.style.cssText = 'font-size: 14px; color: var(--text-muted);';
+
+			const readingDaysSpan = doc.createElement('span');
+			readingDaysSpan.textContent = `${stat.readingDays} reading days, Avg: ${stat.averageTimeToFinish} sessions`;
+			readingDaysSpan.style.cssText = 'font-size: 11px; color: var(--text-faint);';
+
+			rightContainer.appendChild(booksPages);
+			rightContainer.appendChild(readingDaysSpan);
+
+			item.appendChild(leftContainer);
+			item.appendChild(rightContainer);
+			list.appendChild(item);
+		});
+
+		container.appendChild(list);
+	}
+
+	private renderMonthlyContent(container: HTMLElement, doc: Document): void {
+		const months = Object.keys(this.stats!.monthlyStats).sort().reverse().slice(0, 12);
+		
+		if (months.length === 0) {
+			const emptyState = doc.createElement('div');
+			emptyState.style.cssText = 'display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--text-muted);';
+			
+			const emptyIcon = doc.createElement('div');
+			emptyIcon.textContent = '??';
+			emptyIcon.style.cssText = 'font-size: 48px; margin-bottom: 16px; opacity: 0.5;';
+			
+			const emptyText = doc.createElement('div');
+			emptyText.textContent = 'No monthly data available';
+			emptyText.style.cssText = 'font-size: 14px;';
+			
+			emptyState.appendChild(emptyIcon);
+			emptyState.appendChild(emptyText);
+			container.appendChild(emptyState);
+			return;
+		}
+
+		// Grid: charts in 2-3 columns
+		const chartsGrid = doc.createElement('div');
+		chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px; margin-bottom: 16px;';
+
+		// Line chart
+		const lineChartContainer = doc.createElement('div');
+		lineChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		
+		const lineTitle = doc.createElement('h3');
+		lineTitle.textContent = 'Books trend (Last 12 months)';
+		lineTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		lineChartContainer.appendChild(lineTitle);
+
+		const lineChart = doc.createElement('div');
+		lineChart.style.cssText = 'height: 200px; position: relative;';
+		this.renderLineChart(lineChart, doc, months.map(month => {
+			const stat = this.stats!.monthlyStats[month];
+			const parts = month.split('-');
+			const year = parts[0] || '';
+			const monthNum = parts[1] || '1';
+			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
+			return {
+				label: monthLabel,
+				value: stat ? stat.count : 0,
+				change: stat?.change,
+				changePercent: stat?.changePercent,
+			};
+		}), 'Month');
+		lineChartContainer.appendChild(lineChart);
+		chartsGrid.appendChild(lineChartContainer);
+
+		// Bar chart
+		const barChartContainer = doc.createElement('div');
+		barChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		
+		const barTitle = doc.createElement('h3');
+		barTitle.textContent = 'Books comparison (Last 12 months)';
+		barTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		barChartContainer.appendChild(barTitle);
+
+		const barChart = doc.createElement('div');
+		barChart.style.cssText = 'height: 200px; position: relative;';
+		this.renderBarChart(barChart, doc, months.map(month => {
+			const stat = this.stats!.monthlyStats[month];
+			const parts = month.split('-');
+			const year = parts[0] || '';
+			const monthNum = parts[1] || '1';
+			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
+			return {
+				label: monthLabel,
+				value: stat ? stat.count : 0,
+			};
+		}));
+		barChartContainer.appendChild(barChart);
+		chartsGrid.appendChild(barChartContainer);
+
+		container.appendChild(chartsGrid);
+
+		// Details list
+		const list = doc.createElement('div');
+		list.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		
+		const listTitle = doc.createElement('h3');
+		listTitle.textContent = 'Details';
+		listTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		list.appendChild(listTitle);
+
+		months.forEach(month => {
+			const stat = this.stats!.monthlyStats[month];
+			if (!stat) return;
+			
+			const parts = month.split('-');
+			const year = parts[0] || '';
+			const monthNum = parts[1] || '1';
+			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
+			
+			const item = doc.createElement('div');
+			item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--background-modifier-border);';
+
+			const leftContainer = doc.createElement('div');
+			leftContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
+
+			const label = doc.createElement('span');
+			label.textContent = monthLabel;
+			label.style.cssText = 'font-size: 14px; font-weight: 600;';
+			leftContainer.appendChild(label);
+
+			if (stat.change !== undefined && stat.changePercent !== undefined) {
+				const changeEl = doc.createElement('span');
+				const isPositive = stat.change >= 0;
+				const changeText = isPositive ? `+${stat.change}` : `${stat.change}`;
+				const percentText = isPositive ? `+${stat.changePercent}%` : `${stat.changePercent}%`;
+				changeEl.textContent = `${changeText} (${percentText})`;
+				changeEl.style.cssText = `font-size: 11px; color: ${isPositive ? 'var(--interactive-success)' : 'var(--text-error)'};`;
+				leftContainer.appendChild(changeEl);
+			}
+
+			const rightContainer = doc.createElement('div');
+			rightContainer.style.cssText = 'display: flex; flex-direction: column; gap: 2px; align-items: flex-end;';
+
+			const booksPages = doc.createElement('span');
+			booksPages.textContent = `${stat.count} books, ${stat.pages.toLocaleString()} pages`;
+			booksPages.style.cssText = 'font-size: 14px; color: var(--text-muted);';
+
+			const readingDaysSpan = doc.createElement('span');
+			readingDaysSpan.textContent = `${stat.readingDays} reading days, Avg: ${stat.averageTimeToFinish} sessions`;
+			readingDaysSpan.style.cssText = 'font-size: 11px; color: var(--text-faint);';
+
+			rightContainer.appendChild(booksPages);
+			rightContainer.appendChild(readingDaysSpan);
+
+			item.appendChild(leftContainer);
+			item.appendChild(rightContainer);
+			list.appendChild(item);
+		});
+
+		container.appendChild(list);
+	}
+
+	private renderCategorySection(container: HTMLElement, doc: Document): void {
+		const section = doc.createElement('div');
+		section.style.cssText = 'margin-bottom: 40px;';
+
+		// Section header
+		const header = doc.createElement('h2');
+		header.textContent = 'Category statistics';
+		header.style.cssText = 'margin: 0 0 16px 0; font-size: 1.4em; padding-bottom: 8px; border-bottom: 2px solid var(--background-modifier-border);';
+		section.appendChild(header);
+
+		const categories = Object.entries(this.stats!.categoryCounts)
+			.sort((a, b) => b[1] - a[1])
+			.slice(0, 10);
+
+		if (categories.length === 0) {
+			const emptyState = doc.createElement('div');
+			emptyState.style.cssText = 'display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--text-muted);';
+			
+			const emptyIcon = doc.createElement('div');
+			emptyIcon.textContent = '??';
+			emptyIcon.style.cssText = 'font-size: 48px; margin-bottom: 16px; opacity: 0.5;';
+			
+			const emptyText = doc.createElement('div');
+			emptyText.textContent = 'No category data available';
+			emptyText.style.cssText = 'font-size: 14px;';
+			
+			emptyState.appendChild(emptyIcon);
+			emptyState.appendChild(emptyText);
+			section.appendChild(emptyState);
+		} else {
+			const chartContainer = doc.createElement('div');
+			chartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+			
+			const chartTitle = doc.createElement('h3');
+			chartTitle.textContent = 'Books by category (Top 10)';
+			chartTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+			chartContainer.appendChild(chartTitle);
+
+			const barChart = doc.createElement('div');
+			barChart.style.cssText = 'height: 300px; position: relative;';
+			this.renderBarChart(barChart, doc, categories.map(([category, count]) => ({
+				label: category,
+				value: count,
+			})));
+			chartContainer.appendChild(barChart);
+			section.appendChild(chartContainer);
+		}
+
+		container.appendChild(section);
 	}
 
 	private renderOverviewCards(container: HTMLElement, doc: Document): void {
