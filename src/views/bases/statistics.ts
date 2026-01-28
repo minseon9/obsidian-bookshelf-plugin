@@ -389,31 +389,31 @@ export class StatisticsBasesView extends BasesViewBase {
 		const section = doc.createElement('div');
 		section.style.cssText = 'margin-bottom: 40px;';
 
-		// Section header
+		// Section header with toggle
+		const headerContainer = doc.createElement('div');
+		headerContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--background-modifier-border);';
+		
 		const header = doc.createElement('h2');
 		header.textContent = 'Time-based statistics';
-		header.style.cssText = 'margin: 0 0 16px 0; font-size: 1.4em; padding-bottom: 8px; border-bottom: 2px solid var(--background-modifier-border);';
-		section.appendChild(header);
+		header.style.cssText = 'margin: 0; font-size: 1.4em;';
+		headerContainer.appendChild(header);
 
-		// Dropdown selector
-		const selectorContainer = doc.createElement('div');
-		selectorContainer.style.cssText = 'margin-bottom: 16px;';
+		// Toggle buttons
+		const toggleContainer = doc.createElement('div');
+		toggleContainer.style.cssText = 'display: flex; gap: 4px; background: var(--background-secondary); border-radius: 6px; padding: 4px;';
 
-		const select = doc.createElement('select');
-		select.style.cssText = 'padding: 8px 12px; border-radius: 6px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); color: var(--text-normal); font-size: 14px; cursor: pointer;';
+		const yearButton = doc.createElement('button');
+		yearButton.textContent = 'Yearly';
+		yearButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: var(--interactive-accent); color: var(--text-on-accent); font-size: 13px; font-weight: 600; cursor: pointer;';
 		
-		const yearOption = doc.createElement('option');
-		yearOption.value = 'year';
-		yearOption.textContent = 'Yearly';
-		select.appendChild(yearOption);
+		const monthButton = doc.createElement('button');
+		monthButton.textContent = 'Monthly';
+		monthButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;';
 
-		const monthOption = doc.createElement('option');
-		monthOption.value = 'month';
-		monthOption.textContent = 'Monthly';
-		select.appendChild(monthOption);
-
-		selectorContainer.appendChild(select);
-		section.appendChild(selectorContainer);
+		toggleContainer.appendChild(yearButton);
+		toggleContainer.appendChild(monthButton);
+		headerContainer.appendChild(toggleContainer);
+		section.appendChild(headerContainer);
 
 		// Content container
 		const contentContainer = doc.createElement('div');
@@ -422,13 +422,18 @@ export class StatisticsBasesView extends BasesViewBase {
 		// Render yearly by default
 		this.renderYearlyContent(contentContainer, doc);
 
-		select.addEventListener('change', () => {
+		yearButton.addEventListener('click', () => {
+			yearButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: var(--interactive-accent); color: var(--text-on-accent); font-size: 13px; font-weight: 600; cursor: pointer;';
+			monthButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;';
 			contentContainer.empty();
-			if (select.value === 'year') {
-				this.renderYearlyContent(contentContainer, doc);
-			} else {
-				this.renderMonthlyContent(contentContainer, doc);
-			}
+			this.renderYearlyContent(contentContainer, doc);
+		});
+
+		monthButton.addEventListener('click', () => {
+			monthButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: var(--interactive-accent); color: var(--text-on-accent); font-size: 13px; font-weight: 600; cursor: pointer;';
+			yearButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;';
+			contentContainer.empty();
+			this.renderMonthlyContent(contentContainer, doc);
 		});
 
 		section.appendChild(contentContainer);
@@ -456,22 +461,22 @@ export class StatisticsBasesView extends BasesViewBase {
 			return;
 		}
 
-		// Grid: charts in 2-3 columns
+		// Grid: 3 charts in a row
 		const chartsGrid = doc.createElement('div');
-		chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px; margin-bottom: 16px;';
+		chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 16px;';
 
-		// Line chart
-		const lineChartContainer = doc.createElement('div');
-		lineChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		// Finished books chart
+		const booksChartContainer = doc.createElement('div');
+		booksChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
 		
-		const lineTitle = doc.createElement('h3');
-		lineTitle.textContent = 'Books trend';
-		lineTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		lineChartContainer.appendChild(lineTitle);
+		const booksTitle = doc.createElement('h3');
+		booksTitle.textContent = 'Finished books';
+		booksTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		booksChartContainer.appendChild(booksTitle);
 
-		const lineChart = doc.createElement('div');
-		lineChart.style.cssText = 'height: 200px; position: relative;';
-		this.renderLineChart(lineChart, doc, years.map(year => {
+		const booksChart = doc.createElement('div');
+		booksChart.style.cssText = 'height: 200px; position: relative;';
+		this.renderLineChart(booksChart, doc, years.map(year => {
 			const stat = this.stats!.yearlyStats[year];
 			return {
 				label: year,
@@ -480,29 +485,50 @@ export class StatisticsBasesView extends BasesViewBase {
 				changePercent: stat?.changePercent,
 			};
 		}), 'Year');
-		lineChartContainer.appendChild(lineChart);
-		chartsGrid.appendChild(lineChartContainer);
+		booksChartContainer.appendChild(booksChart);
+		chartsGrid.appendChild(booksChartContainer);
 
-		// Bar chart
-		const barChartContainer = doc.createElement('div');
-		barChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		// Pages read chart
+		const pagesChartContainer = doc.createElement('div');
+		pagesChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
 		
-		const barTitle = doc.createElement('h3');
-		barTitle.textContent = 'Books comparison';
-		barTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		barChartContainer.appendChild(barTitle);
+		const pagesTitle = doc.createElement('h3');
+		pagesTitle.textContent = 'Pages read';
+		pagesTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		pagesChartContainer.appendChild(pagesTitle);
 
-		const barChart = doc.createElement('div');
-		barChart.style.cssText = 'height: 200px; position: relative;';
-		this.renderBarChart(barChart, doc, years.map(year => {
+		const pagesChart = doc.createElement('div');
+		pagesChart.style.cssText = 'height: 200px; position: relative;';
+		this.renderLineChart(pagesChart, doc, years.map(year => {
 			const stat = this.stats!.yearlyStats[year];
 			return {
 				label: year,
-				value: stat ? stat.count : 0,
+				value: stat ? stat.pages : 0,
 			};
-		}));
-		barChartContainer.appendChild(barChart);
-		chartsGrid.appendChild(barChartContainer);
+		}), 'Year');
+		pagesChartContainer.appendChild(pagesChart);
+		chartsGrid.appendChild(pagesChartContainer);
+
+		// Reading days chart
+		const daysChartContainer = doc.createElement('div');
+		daysChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		
+		const daysTitle = doc.createElement('h3');
+		daysTitle.textContent = 'Reading days';
+		daysTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		daysChartContainer.appendChild(daysTitle);
+
+		const daysChart = doc.createElement('div');
+		daysChart.style.cssText = 'height: 200px; position: relative;';
+		this.renderLineChart(daysChart, doc, years.map(year => {
+			const stat = this.stats!.yearlyStats[year];
+			return {
+				label: year,
+				value: stat ? stat.readingDays : 0,
+			};
+		}), 'Year');
+		daysChartContainer.appendChild(daysChart);
+		chartsGrid.appendChild(daysChartContainer);
 
 		container.appendChild(chartsGrid);
 
@@ -583,22 +609,22 @@ export class StatisticsBasesView extends BasesViewBase {
 			return;
 		}
 
-		// Grid: charts in 2-3 columns
+		// Grid: 3 charts in a row
 		const chartsGrid = doc.createElement('div');
-		chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px; margin-bottom: 16px;';
+		chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 16px;';
 
-		// Line chart
-		const lineChartContainer = doc.createElement('div');
-		lineChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		// Finished books chart
+		const booksChartContainer = doc.createElement('div');
+		booksChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
 		
-		const lineTitle = doc.createElement('h3');
-		lineTitle.textContent = 'Books trend (Last 12 months)';
-		lineTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		lineChartContainer.appendChild(lineTitle);
+		const booksTitle = doc.createElement('h3');
+		booksTitle.textContent = 'Finished books (Last 12)';
+		booksTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		booksChartContainer.appendChild(booksTitle);
 
-		const lineChart = doc.createElement('div');
-		lineChart.style.cssText = 'height: 200px; position: relative;';
-		this.renderLineChart(lineChart, doc, months.map(month => {
+		const booksChart = doc.createElement('div');
+		booksChart.style.cssText = 'height: 200px; position: relative;';
+		this.renderLineChart(booksChart, doc, months.map(month => {
 			const stat = this.stats!.monthlyStats[month];
 			const parts = month.split('-');
 			const year = parts[0] || '';
@@ -612,21 +638,21 @@ export class StatisticsBasesView extends BasesViewBase {
 				changePercent: stat?.changePercent,
 			};
 		}), 'Month');
-		lineChartContainer.appendChild(lineChart);
-		chartsGrid.appendChild(lineChartContainer);
+		booksChartContainer.appendChild(booksChart);
+		chartsGrid.appendChild(booksChartContainer);
 
-		// Bar chart
-		const barChartContainer = doc.createElement('div');
-		barChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		// Pages read chart
+		const pagesChartContainer = doc.createElement('div');
+		pagesChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
 		
-		const barTitle = doc.createElement('h3');
-		barTitle.textContent = 'Books comparison (Last 12 months)';
-		barTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		barChartContainer.appendChild(barTitle);
+		const pagesTitle = doc.createElement('h3');
+		pagesTitle.textContent = 'Pages read (Last 12)';
+		pagesTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		pagesChartContainer.appendChild(pagesTitle);
 
-		const barChart = doc.createElement('div');
-		barChart.style.cssText = 'height: 200px; position: relative;';
-		this.renderBarChart(barChart, doc, months.map(month => {
+		const pagesChart = doc.createElement('div');
+		pagesChart.style.cssText = 'height: 200px; position: relative;';
+		this.renderLineChart(pagesChart, doc, months.map(month => {
 			const stat = this.stats!.monthlyStats[month];
 			const parts = month.split('-');
 			const year = parts[0] || '';
@@ -635,11 +661,37 @@ export class StatisticsBasesView extends BasesViewBase {
 			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
 			return {
 				label: monthLabel,
-				value: stat ? stat.count : 0,
+				value: stat ? stat.pages : 0,
 			};
-		}));
-		barChartContainer.appendChild(barChart);
-		chartsGrid.appendChild(barChartContainer);
+		}), 'Month');
+		pagesChartContainer.appendChild(pagesChart);
+		chartsGrid.appendChild(pagesChartContainer);
+
+		// Reading days chart
+		const daysChartContainer = doc.createElement('div');
+		daysChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
+		
+		const daysTitle = doc.createElement('h3');
+		daysTitle.textContent = 'Reading days (Last 12)';
+		daysTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
+		daysChartContainer.appendChild(daysTitle);
+
+		const daysChart = doc.createElement('div');
+		daysChart.style.cssText = 'height: 200px; position: relative;';
+		this.renderLineChart(daysChart, doc, months.map(month => {
+			const stat = this.stats!.monthlyStats[month];
+			const parts = month.split('-');
+			const year = parts[0] || '';
+			const monthNum = parts[1] || '1';
+			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
+			return {
+				label: monthLabel,
+				value: stat ? stat.readingDays : 0,
+			};
+		}), 'Month');
+		daysChartContainer.appendChild(daysChart);
+		chartsGrid.appendChild(daysChartContainer);
 
 		container.appendChild(chartsGrid);
 
@@ -744,7 +796,7 @@ export class StatisticsBasesView extends BasesViewBase {
 			chartContainer.appendChild(chartTitle);
 
 			const barChart = doc.createElement('div');
-			barChart.style.cssText = 'height: 300px; position: relative;';
+			barChart.style.cssText = 'height: 200px; position: relative;';
 			this.renderBarChart(barChart, doc, categories.map(([category, count]) => ({
 				label: category,
 				value: count,

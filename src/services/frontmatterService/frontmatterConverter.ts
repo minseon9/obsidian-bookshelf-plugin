@@ -18,8 +18,8 @@ export class FrontmatterConverter {
 			total: 0,
 			status: book.status || 'unread',
 			read_page: book.readPage || 0,
-			read_started: book.readStarted || created,
-			read_finished: book.readFinished || '',
+			read_started: book.readStarted !== undefined ? book.readStarted : created,
+			read_finished: book.readFinished || null,
 			created: created,
 			updated: book.updated || now,
 		};
