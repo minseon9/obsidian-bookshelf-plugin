@@ -1,0 +1,472 @@
+import { Component, App, TFile, setIcon } from "obsidian";
+import BookshelfPlugin from "../main";
+import { BasesDataAdapter } from "./BasesDataAdapter";
+import { Book } from "../models/book";
+import { FileManagerUtils } from "../utils/fileManagerUtils";
+
+/**
+ * Abstract base class for all Bookshelf Bases views.
+ * Properly extends Component to leverage lifecycle, and implements BasesView interface.
+ */
+export abstract class BasesViewBase extends Component {
+	// BasesView properties (provided by Bases when factory returns this instance)
+	app!: App;
+	config!: any; // BasesViewConfig - using any since not exported from public API
+	data!: any; // BasesQueryResult - using any since not exported from public API
+	protected plugin: BookshelfPlugin;
+	protected dataAdapter: BasesDataAdapter;
+	protected containerEl: HTMLElement;
+	protected rootElement: HTMLElement | null = null;
+	protected fileManager: FileManagerUtils;
+	protected updateDebounceTimer: number | null = null;
+	protected dataUpdateDebounceTimer: number | null = null;
+
+	constructor(controller: any, containerEl: HTMLElement, plugin: BookshelfPlugin) {
+		// Call Component constructor
+		super();
+		this.plugin = plugin;
+		this.containerEl = containerEl;
+		// Use plugin.app since this.app may not be set yet (Bases sets it later)
+		this.fileManager = new FileManagerUtils(plugin.app);
+
+		// Note: app, config, and data will be set by Bases when it creates the view
+		// We just need to ensure our types match the BasesView interface
+
+		this.dataAdapter = new BasesDataAdapter(this);
+	}
+
+	/**
+	 * Component lifecycle: Called when view is first loaded.
+	 * Override from Component base class.
+	 */
+	onload(): void {
+		this.setupContainer();
+		
+		// Wait a bit for Bases to populate data
+		// Use requestAnimationFrame for better timing
+		requestAnimationFrame(() => {
+			setTimeout(() => {
+				if (this.rootElement?.isConnected) {
+					this.render();
+				}
+			}, 100);
+		});
+	}
+
+	/**
+	 * BasesView lifecycle: Called when Bases data changes.
+	 * Required abstract method implementation.
+	 * Debounced to prevent excessive re-renders during rapid file saves.
+	 */
+	onDataUpdated(): void {
+		
+		// Skip if view is not visible
+		if (!this.rootElement?.isConnected) {
+			return;
+		}
+
+		// Debounce data updates to avoid freezing during typing
+		if (this.dataUpdateDebounceTimer) {
+			clearTimeout(this.dataUpdateDebounceTimer);
+		}
+
+		// Use correct window for pop-out window support
+		const win = this.containerEl.ownerDocument.defaultView || window;
+		this.dataUpdateDebounceTimer = win.setTimeout(() => {
+			this.dataUpdateDebounceTimer = null;
+			try {
+				this.render();
+			} catch (error) {
+				console.error(`[Bookshelf][${this.type}] Render error:`, error);
+				this.renderError(error as Error);
+			}
+		}, 500); // 500ms debounce for data updates
+	}
+
+	/**
+	 * Component lifecycle: Called when view is unloaded.
+	 */
+	onunload(): void {
+		if (this.dataUpdateDebounceTimer) {
+			clearTimeout(this.dataUpdateDebounceTimer);
+		}
+		if (this.updateDebounceTimer) {
+			clearTimeout(this.updateDebounceTimer);
+		}
+		super.onunload();
+	}
+
+	/**
+	 * Setup the container element
+	 */
+	protected setupContainer(): void {
+		// Use correct document for pop-out window support
+		const doc = this.containerEl.ownerDocument;
+
+		// Don't clear containerEl - Bases manages it
+		// Just create our root element inside it
+		const rootEl = doc.createElement("div");
+		rootEl.className = "bookshelf-bases-view";
+		rootEl.style.cssText = "display: flex; flex-direction: column; height: 100%; width: 100%;";
+		rootEl.tabIndex = -1; // Make focusable without adding to tab order
+		this.containerEl.appendChild(rootEl);
+		this.rootElement = rootEl;
+
+		// Add custom "New Book" button and hide the default Bases "New" button
+		this.setupNewBookButton();
+	}
+
+	/**
+	 * Setup custom "New Book" button that opens Bookshelf search modal.
+	 * Injects the button into the Bases toolbar and hides the default "New" button.
+	 */
+	protected setupNewBookButton(): void {
+		// Defer to allow Bases to render its toolbar first
+		// Try multiple times in case toolbar isn't ready yet
+		let attempts = 0;
+		const maxAttempts = 10;
+		
+		const tryInject = () => {
+			attempts++;
+			console.log(`[Bookshelf][Bases] Attempting to inject button (attempt ${attempts}/${maxAttempts})`);
+			this.injectNewBookButton();
+			
+			// If button wasn't injected, try again
+			const basesViewEl = this.containerEl.closest(".bases-view");
+			const parentEl = basesViewEl?.parentElement;
+			const toolbarEl = parentEl?.querySelector(".bases-toolbar");
+			const buttonExists = toolbarEl?.querySelector(".bookshelf-bases-new-book-btn");
+			
+			if (!buttonExists && attempts < maxAttempts) {
+				setTimeout(tryInject, 200);
+			} else if (buttonExists) {
+				console.log("[Bookshelf][Bases] Button injected successfully");
+			} else {
+				console.warn("[Bookshelf][Bases] Failed to inject button after max attempts");
+			}
+		};
+		
+		setTimeout(tryInject, 100);
+
+		// Register cleanup to toggle off the active class when view is unloaded
+		this.register(() => this.cleanupNewBookButton());
+	}
+
+	/**
+	 * Clean up: just remove the "active" class, keep the button for reuse.
+	 */
+	private cleanupNewBookButton(): void {
+		const basesViewEl = this.containerEl.closest(".bases-view");
+		const parentEl = basesViewEl?.parentElement;
+
+		// Only remove the "active" class - button stays for potential reuse
+		parentEl?.classList.remove("bookshelf-view-active");
+	}
+
+	/**
+	 * Inject the custom "New Book" button into the Bases toolbar.
+	 */
+	private injectNewBookButton(): void {
+		// Find the Bases view container
+		const basesViewEl = this.containerEl.closest(".bases-view");
+		if (!basesViewEl) {
+			console.debug("[Bookshelf][Bases] No .bases-view found");
+			return;
+		}
+
+		// The toolbar is a sibling of .bases-view, not a child
+		// Look in the parent container for the toolbar
+		const parentEl = basesViewEl.parentElement;
+		if (!parentEl) {
+			console.debug("[Bookshelf][Bases] No parent element found");
+			return;
+		}
+
+		// Mark parent as having an active Bookshelf view (controls visibility via CSS)
+		parentEl.classList.add("bookshelf-view-active");
+
+		const toolbarEl = parentEl.querySelector(".bases-toolbar");
+		if (!toolbarEl) {
+			console.debug("[Bookshelf][Bases] No .bases-toolbar found in parent");
+			return;
+		}
+
+		// Check if we already added the button (reuse existing)
+		if (toolbarEl.querySelector(".bookshelf-bases-new-book-btn")) {
+			console.log("[Bookshelf][Bases] Button already exists, skipping");
+			return;
+		}
+
+		// Use correct document for pop-out window support
+		const doc = this.containerEl.ownerDocument;
+
+		// Create "New Book" button matching Bases' text-icon-button style
+		const newBookBtn = doc.createElement("div");
+		newBookBtn.className = "bases-toolbar-item bookshelf-bases-new-book-btn";
+
+		const innerBtn = doc.createElement("div");
+		innerBtn.className = "text-icon-button";
+		innerBtn.tabIndex = 0;
+
+		// Add icon
+		const iconSpan = doc.createElement("span");
+		iconSpan.className = "text-button-icon";
+		setIcon(iconSpan, "book-plus");
+		innerBtn.appendChild(iconSpan);
+
+		// Add label
+		const labelSpan = doc.createElement("span");
+		labelSpan.className = "text-button-label";
+		labelSpan.textContent = "New Book";
+		innerBtn.appendChild(labelSpan);
+
+		newBookBtn.appendChild(innerBtn);
+
+		// Add click handler - use direct function reference
+		const handleClick = async (e: Event) => {
+			console.log("[Bookshelf][Bases] New Book button clicked", e.type, e.target);
+			e.stopPropagation();
+			e.preventDefault();
+			e.stopImmediatePropagation();
+			
+			// Use plugin.app instead of this.app (which may not be set yet in Bases context)
+			const app = this.app || this.plugin.app;
+			if (!app) {
+				console.error("[Bookshelf][Bases] App not available");
+				return;
+			}
+			
+			try {
+				const { SearchModal } = await import("../views/searchModal");
+				console.log("[Bookshelf][Bases] SearchModal imported successfully");
+				const modal = new SearchModal(app, this.plugin);
+				console.log("[Bookshelf][Bases] SearchModal created, opening...");
+				modal.open();
+				console.log("[Bookshelf][Bases] SearchModal opened");
+			} catch (error) {
+				console.error("[Bookshelf][Bases] Error opening search modal:", error);
+				console.error("[Bookshelf][Bases] Error stack:", error instanceof Error ? error.stack : String(error));
+			}
+		};
+		
+		// Add to inner button with capture phase
+		innerBtn.addEventListener("click", handleClick, { capture: true, once: false });
+		
+		// Also add mousedown as backup
+		innerBtn.addEventListener("mousedown", (e) => {
+			if (e.button === 0) { // Left click only
+				handleClick(e);
+			}
+		}, { capture: true });
+
+		// Also handle keyboard events
+		innerBtn.addEventListener("keydown", async (e) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.stopPropagation();
+				e.preventDefault();
+				const app = this.app || this.plugin.app;
+				if (!app) {
+					console.error("[Bookshelf][Bases] App not available");
+					return;
+				}
+				try {
+					const { SearchModal } = await import("../views/searchModal");
+					const modal = new SearchModal(app, this.plugin);
+					modal.open();
+				} catch (error) {
+					console.error("[Bookshelf][Bases] Error opening search modal:", error);
+				}
+			}
+		});
+
+		// Find the original "New" button position and insert our button there
+		const originalNewBtn = toolbarEl.querySelector(".bases-toolbar-new-item-menu");
+		if (originalNewBtn) {
+			// Insert before the original (which will be hidden by CSS)
+			originalNewBtn.before(newBookBtn);
+		} else {
+			// Fallback: append to end of toolbar
+			toolbarEl.appendChild(newBookBtn);
+		}
+
+		console.debug("[Bookshelf][Bases] Injected New Book button into toolbar");
+	}
+
+	/**
+	 * Extract books from Bases data items
+	 */
+	protected 	async extractBooksFromBasesData(dataItems: any[]): Promise<Array<{ book: Book; file: TFile }>> {
+		const books: Array<{ book: Book; file: TFile }> = [];
+
+		for (const item of dataItems) {
+			try {
+				const file = item.file;
+				if (!file || !file.path) {
+					continue;
+				}
+
+
+				// Get file from vault - use plugin.app as fallback since this.app may not be set yet
+				const app = this.app || this.plugin.app;
+				if (!app) {
+					continue;
+				}
+				
+				const vaultFile = app.vault.getAbstractFileByPath(file.path);
+				if (!vaultFile || !(vaultFile instanceof TFile)) {
+					continue;
+				}
+
+				// Load book data from file
+				const bookData = await this.fileManager.getBookFromFile(vaultFile);
+				if (bookData.title) {
+				// Get reading history summary from frontmatter (for statistics)
+				// This is faster than parsing body and contains essential data
+				let lastReadDate: string | undefined;
+				let totalPagesReadFromHistory: number | undefined;
+				try {
+					const content = await app.vault.read(vaultFile);
+					const frontmatterProcessor = (this.fileManager as any).frontmatterProcessor;
+					const { frontmatter } = frontmatterProcessor.extractFrontmatter(content);
+					
+					// Use reading_history_summary from frontmatter (for statistics)
+					const historySummary = frontmatter.reading_history_summary;
+					if (historySummary && Array.isArray(historySummary) && historySummary.length > 0) {
+						// Get most recent record for last read date
+						const sorted = [...historySummary].sort((a: any, b: any) => {
+							const dateA = a.date || a.timestamp || '';
+							const dateB = b.date || b.timestamp || '';
+							return dateB.localeCompare(dateA);
+						});
+						const latest = sorted[0];
+						if (latest?.date) {
+							lastReadDate = latest.date;
+						} else if (latest?.timestamp) {
+							lastReadDate = latest.timestamp.split(' ')[0];
+						}
+						
+						// Calculate total pages read from all history records
+						totalPagesReadFromHistory = historySummary.reduce((sum: number, record: any) => {
+							return sum + (record.pagesRead || 0);
+						}, 0);
+					}
+				} catch (e) {
+					// Ignore errors
+				}
+
+					// Use pages read from history summary if available and more accurate than frontmatter
+					const effectiveReadPage = totalPagesReadFromHistory !== undefined && totalPagesReadFromHistory > (bookData.readPage || 0)
+						? totalPagesReadFromHistory
+						: bookData.readPage;
+
+					const book: Book & { lastReadDate?: string } = {
+						title: bookData.title || 'Unknown',
+						subtitle: bookData.subtitle,
+						author: bookData.author || [],
+						isbn10: bookData.isbn10,
+						isbn13: bookData.isbn13,
+						publisher: bookData.publisher,
+						publishDate: bookData.publishDate,
+						totalPages: bookData.totalPages,
+						coverUrl: bookData.coverUrl,
+						category: bookData.category || [],
+						status: (bookData.status as any) || 'unread',
+						readPage: effectiveReadPage,
+						readStarted: bookData.readStarted,
+						readFinished: bookData.readFinished,
+						created: bookData.created || new Date().toISOString(),
+						updated: bookData.updated || new Date().toISOString(),
+						lastReadDate, // From reading_history_summary in frontmatter
+					};
+					books.push({ book, file: vaultFile });
+				} else {
+				}
+			} catch (error) {
+				console.error(`[Bookshelf] Error extracting book from Bases data:`, error);
+			}
+		}
+
+		return books;
+	}
+
+	/**
+	 * Render the view (abstract method to be implemented by subclasses)
+	 */
+	abstract render(): Promise<void> | void;
+
+
+	/**
+	 * Render error state
+	 */
+	protected renderError(error: Error): void {
+		if (!this.rootElement) return;
+
+		const doc = this.rootElement.ownerDocument;
+		this.rootElement.empty();
+
+		const errorEl = doc.createElement("div");
+		errorEl.className = "bookshelf-error";
+		errorEl.style.cssText = "padding: 20px; text-align: center; color: var(--text-error);";
+		errorEl.textContent = `Error: ${error.message}`;
+		this.rootElement.appendChild(errorEl);
+	}
+
+	/**
+	 * Lifecycle: Save ephemeral state (scroll position, etc).
+	 */
+	getEphemeralState(): any {
+		return {
+			scrollTop: this.rootElement?.scrollTop || 0,
+		};
+	}
+
+	/**
+	 * Lifecycle: Restore ephemeral state.
+	 */
+	setEphemeralState(state: any): void {
+		if (!state || !this.rootElement || !this.rootElement.isConnected) return;
+
+		try {
+			if (state.scrollTop !== undefined) {
+				this.rootElement.scrollTop = state.scrollTop;
+			}
+		} catch (e) {
+			console.debug("[Bookshelf][Bases] Failed to restore ephemeral state:", e);
+		}
+	}
+
+	/**
+	 * Lifecycle: Focus this view.
+	 * Called by Bases when the view should receive focus.
+	 */
+	focus(): void {
+		try {
+			if (this.rootElement?.isConnected && typeof this.rootElement.focus === "function") {
+				this.rootElement.focus();
+			}
+		} catch (e) {
+			console.debug("[Bookshelf][Bases] Failed to focus view:", e);
+		}
+	}
+
+	/**
+	 * Lifecycle: Refresh/re-render the view.
+	 */
+	refresh(): void {
+		this.render();
+	}
+
+	/**
+	 * Lifecycle: Handle view resize.
+	 * Called by Bases when the view container is resized.
+	 */
+	onResize(): void {
+		// Default implementation does nothing
+		// Subclasses can override if they need resize handling
+	}
+
+	/**
+	 * View type identifier (to be set by subclasses)
+	 */
+	abstract get type(): string;
+}
