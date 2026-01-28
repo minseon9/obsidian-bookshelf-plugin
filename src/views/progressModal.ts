@@ -108,11 +108,19 @@ export class ProgressUpdateModal extends Modal {
 			});
 		}
 
-		// Get previous reading history
+		// Get previous reading history from frontmatter summary (faster)
 		this.app.vault.read(this.file).then(content => {
 			const frontmatterProcessor = (this.fileManager as any).frontmatterProcessor;
 			const { frontmatter } = frontmatterProcessor.extractFrontmatter(content);
-			const history: ReadingRecord[] = frontmatter.reading_history || [];
+			// Use reading_history_summary from frontmatter for statistics
+			const historySummary = frontmatter.reading_history_summary || [];
+			const history: ReadingRecord[] = historySummary.map((item: any) => ({
+				date: item.date || '',
+				startPage: item.startPage || 0,
+				endPage: item.endPage || 0,
+				pagesRead: item.pagesRead || 0,
+				timestamp: item.timestamp,
+			}));
 			const lastEndPage = getLastEndPage(history);
 			const currentReadPage = this.book?.readPage || 0;
 
@@ -166,15 +174,30 @@ export class ProgressUpdateModal extends Modal {
 				});
 			}
 
-			// Notes input
-			new Setting(container)
+			// Notes input (large text area, like Obsidian editor)
+			const notesSetting = new Setting(container)
 				.setName('Notes (optional)')
-				.setDesc('Add notes about this reading session')
-				.addTextArea(text => {
-					this.notesInput = text.inputEl;
-					this.notesInput.placeholder = 'What did you read? Any thoughts?';
-					this.notesInput.rows = 3;
-				});
+				.setDesc('Add notes about this reading session');
+			
+			// Create a larger textarea
+			this.notesInput = notesSetting.controlEl.createEl('textarea', {
+				cls: 'bookshelf-notes-input',
+			});
+			this.notesInput.placeholder = 'What did you read? Any thoughts?';
+			this.notesInput.style.cssText = `
+				width: 100%;
+				min-height: 300px;
+				padding: 12px;
+				font-size: 14px;
+				line-height: 1.6;
+				font-family: var(--font-text);
+				border: 1px solid var(--background-modifier-border);
+				border-radius: 4px;
+				background-color: var(--background-primary);
+				color: var(--text-normal);
+				resize: vertical;
+				margin-top: 8px;
+			`;
 
 			// Update calculations initially
 			this.updateCalculations();
@@ -227,26 +250,25 @@ export class ProgressUpdateModal extends Modal {
 
 		const startPage = parseInt(this.startPageInput.value, 10) || 0;
 		const endPage = parseInt(this.endPageInput.value, 10) || 0;
+		const pagesRead = Math.max(0, endPage - startPage);
 		let notes = this.notesInput.value.trim() || undefined;
 
 		// Check if notes are required
 		if (this.plugin.settings.requireReadingNotes && !notes) {
-			const errorEl = this.contentEl.querySelector('.bookshelf-error') || this.contentEl.createEl('div', { cls: 'bookshelf-error' });
-			errorEl.textContent = 'Notes are required when updating progress.';
+			this.showErrorMessage('Notes are required when updating progress.');
 			return;
 		}
 
 		if (endPage < startPage) {
-			// Show error
-			const errorEl = this.contentEl.querySelector('.bookshelf-error') || this.contentEl.createEl('div', { cls: 'bookshelf-error' });
-			errorEl.textContent = 'End page must be greater than or equal to start page.';
+			this.showErrorMessage('End page must be greater than or equal to start page.');
 			return;
 		}
 
 		try {
 			await this.fileManager.updateReadingProgress(
 				this.file, 
-				endPage, 
+				endPage,
+				startPage,
 				notes,
 				this.plugin.settings.autoStatusChange
 			);
@@ -263,19 +285,77 @@ export class ProgressUpdateModal extends Modal {
 				});
 			}
 			
-			// Show success message
-			const successEl = this.contentEl.createEl('div', {
-				cls: 'bookshelf-success',
-				text: 'Progress updated successfully!',
-			});
-
-			// Close modal after a short delay
-			setTimeout(() => {
-				this.close();
-			}, 1000);
+			// Show success message with better UI
+			this.showSuccessMessage('Progress updated successfully!');
 		} catch (error) {
-			const errorEl = this.contentEl.querySelector('.bookshelf-error') || this.contentEl.createEl('div', { cls: 'bookshelf-error' });
-			errorEl.textContent = `Failed to update progress: ${error instanceof Error ? error.message : 'Unknown error'}`;
+			this.showErrorMessage(`Failed to update progress: ${error instanceof Error ? error.message : 'Unknown error'}`);
 		}
+	}
+
+	/**
+	 * Show success message with nice UI
+	 */
+	private showSuccessMessage(message: string): void {
+		// Remove any existing messages
+		const existing = this.contentEl.querySelector('.bookshelf-message');
+		if (existing) existing.remove();
+
+		const messageContainer = this.contentEl.createEl('div', {
+			cls: 'bookshelf-message bookshelf-message-success',
+		});
+
+		const icon = messageContainer.createEl('div', {
+			cls: 'bookshelf-message-icon',
+			text: '?',
+		});
+
+		const text = messageContainer.createEl('div', {
+			cls: 'bookshelf-message-text',
+			text: message,
+		});
+
+		const closeButton = messageContainer.createEl('button', {
+			cls: 'bookshelf-message-close',
+			text: 'Close',
+		});
+		closeButton.addEventListener('click', () => {
+			this.close();
+		});
+
+		// Auto-close after 2 seconds
+		setTimeout(() => {
+			this.close();
+		}, 2000);
+	}
+
+	/**
+	 * Show error message with nice UI
+	 */
+	private showErrorMessage(message: string): void {
+		// Remove any existing messages
+		const existing = this.contentEl.querySelector('.bookshelf-message');
+		if (existing) existing.remove();
+
+		const messageContainer = this.contentEl.createEl('div', {
+			cls: 'bookshelf-message bookshelf-message-error',
+		});
+
+		const icon = messageContainer.createEl('div', {
+			cls: 'bookshelf-message-icon',
+			text: '?',
+		});
+
+		const text = messageContainer.createEl('div', {
+			cls: 'bookshelf-message-text',
+			text: message,
+		});
+
+		const closeButton = messageContainer.createEl('button', {
+			cls: 'bookshelf-message-close',
+			text: 'Dismiss',
+		});
+		closeButton.addEventListener('click', () => {
+			messageContainer.remove();
+		});
 	}
 }
