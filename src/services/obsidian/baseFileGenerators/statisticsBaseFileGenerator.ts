@@ -2,7 +2,7 @@ import type { BookshelfSettings } from "../../../settings/types";
 
 export class StatisticsBaseFileGenerator {
 	static generate(settings: BookshelfSettings): string {
-		const booksFolder = `${settings.bookFolder}/books`;
+		const booksFolder = `${settings.bookFolder}/Books`;
 		
 		return `filters:
   and:
