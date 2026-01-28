@@ -138,5 +138,20 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					this.plugin.settings.defaultStatus = value as 'unread' | 'reading';
 					await this.plugin.saveSettings();
 				}));
+
+		containerEl.createEl('h3', { text: 'Date & Time' });
+		new Setting(containerEl)
+			.setName('Timezone offset')
+			.setDesc('Timezone offset from UTC in hours (e.g., 0 for UTC, 9 for KST, -5 for EST)')
+			.addText(text => text
+				.setPlaceholder('0')
+				.setValue(this.plugin.settings.timezone.toString())
+				.onChange(async (value) => {
+					const offset = parseFloat(value);
+					if (!isNaN(offset) && offset >= -12 && offset <= 14) {
+						this.plugin.settings.timezone = offset;
+						await this.plugin.saveSettings();
+					}
+				}));
 	}
 }

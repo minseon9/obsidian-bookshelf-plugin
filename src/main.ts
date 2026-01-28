@@ -8,7 +8,7 @@ import { FrontmatterParser } from "./services/frontmatterService/frontmatterPars
 import { FrontmatterCreator } from "./services/frontmatterService/frontmatterCreator";
 import { SearchModal } from "./views/bookSearchModal";
 import { ProgressUpdateModal } from "./views/progressUpdateModal";
-import { getCurrentDateTime } from "./utils/dateUtils";
+import { getCurrentDateTime, setTimezoneOffset } from "./utils/dateUtils";
 import { registerBasesBookshelfView, unregisterBasesViews } from "./services/obsidian/bases/basesViewRegistrar";
 import { BookshelfBaseFileGenerator } from "./services/obsidian/baseFileGenerators/bookshelfBaseFileGenerator";
 import { LibraryBaseFileGenerator } from "./services/obsidian/baseFileGenerators/libraryBaseFileGenerator";
@@ -19,6 +19,9 @@ export default class BookshelfPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+		
+		// Initialize timezone offset
+		setTimezoneOffset(this.settings.timezone);
 
 		const folderManager = new FolderManager(this.app);
 		try {
@@ -245,5 +248,7 @@ export default class BookshelfPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		// Update timezone offset when settings are saved
+		setTimezoneOffset(this.settings.timezone);
 	}
 }

@@ -104,13 +104,15 @@ export class ReadingHistoryManager {
 		endPage: number,
 		notes?: string
 	): ReadingRecord {
+		const now = getCurrentDateTime();
+		const datePart = now.split(' ')[0];
 		return {
-			date: getCurrentDateTime('YYYY-MM-DD'),
+			date: datePart || now,
 			startPage,
 			endPage,
 			pagesRead: Math.max(0, endPage - startPage),
 			notes: notes || undefined,
-			timestamp: getCurrentDateTime(),
+			timestamp: now,
 		};
 	}
 }

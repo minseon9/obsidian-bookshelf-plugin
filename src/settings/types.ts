@@ -9,6 +9,7 @@ export interface BookshelfSettings {
 	trackReadingHistory: boolean;
 	requireReadingNotes: boolean;
 	defaultStatus: 'unread' | 'reading';
+	timezone: number;
 }
 
 export const DEFAULT_SETTINGS: BookshelfSettings = {
@@ -22,4 +23,5 @@ export const DEFAULT_SETTINGS: BookshelfSettings = {
 	trackReadingHistory: true,
 	requireReadingNotes: false,
 	defaultStatus: 'unread',
+	timezone: 0,
 };
