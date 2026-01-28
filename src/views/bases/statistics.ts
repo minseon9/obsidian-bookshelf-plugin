@@ -14,11 +14,25 @@ interface BookStatistics {
 	finished: number;
 	totalPages: number;
 	readPages: number;
+	totalReadingDays: number;
 	averageTimeToFinish: number;
 	categoryCounts: Record<string, number>;
-	yearlyStats: Record<string, { count: number; pages: number; readingDays: number; change?: number; changePercent?: number }>;
-	monthlyStats: Record<string, { count: number; pages: number; readingDays: number; change?: number; changePercent?: number }>;
-	readingDays: number;
+	yearlyStats: Record<string, { 
+		count: number; 
+		pages: number; 
+		readingDays: number; 
+		averageTimeToFinish: number;
+		change?: number; 
+		changePercent?: number;
+	}>;
+	monthlyStats: Record<string, { 
+		count: number; 
+		pages: number; 
+		readingDays: number; 
+		averageTimeToFinish: number;
+		change?: number; 
+		changePercent?: number;
+	}>;
 }
 
 /**
@@ -58,11 +72,11 @@ export class StatisticsBasesView extends BasesViewBase {
 			finished: 0,
 			totalPages: 0,
 			readPages: 0,
+			totalReadingDays: 0,
 			averageTimeToFinish: 0,
 			categoryCounts: {},
 			yearlyStats: {},
 			monthlyStats: {},
-			readingDays: 0,
 		};
 
 		const finishedBooks: Book[] = [];
@@ -95,7 +109,7 @@ export class StatisticsBasesView extends BasesViewBase {
 				const month = `${year}-${String(finishedDate.getMonth() + 1).padStart(2, '0')}`;
 
 				if (!stats.yearlyStats[year]) {
-					stats.yearlyStats[year] = { count: 0, pages: 0, readingDays: 0 };
+					stats.yearlyStats[year] = { count: 0, pages: 0, readingDays: 0, averageTimeToFinish: 0 };
 				}
 				stats.yearlyStats[year].count++;
 				if (book.totalPages) {
@@ -103,14 +117,14 @@ export class StatisticsBasesView extends BasesViewBase {
 				}
 
 				if (!stats.monthlyStats[month]) {
-					stats.monthlyStats[month] = { count: 0, pages: 0, readingDays: 0 };
+					stats.monthlyStats[month] = { count: 0, pages: 0, readingDays: 0, averageTimeToFinish: 0 };
 				}
 				stats.monthlyStats[month].count++;
 				if (book.totalPages) {
 					stats.monthlyStats[month].pages += book.totalPages;
 				}
 
-				// Calculate reading days for this book
+				// Calculate reading days and average time to finish for this book
 				const bookReadingDaysSet = new Set<string>();
 				if (book.readStarted) {
 					const startDate = new Date(book.readStarted);
@@ -138,7 +152,9 @@ export class StatisticsBasesView extends BasesViewBase {
 
 				const bookReadingDays = bookReadingDaysSet.size;
 				stats.yearlyStats[year].readingDays += bookReadingDays;
+				stats.yearlyStats[year].averageTimeToFinish += bookReadingDays;
 				stats.monthlyStats[month].readingDays += bookReadingDays;
+				stats.monthlyStats[month].averageTimeToFinish += bookReadingDays;
 			}
 
 			// Reading days calculation: only days with update progress (from reading_history_summary)
@@ -172,41 +188,59 @@ export class StatisticsBasesView extends BasesViewBase {
 			}
 		}
 
-		stats.readingDays = readingDaysSet.size;
+		stats.totalReadingDays = readingDaysSet.size;
 
-		// Calculate changes (variation) for yearly stats
+		// Calculate average time to finish per period and changes
 		const sortedYears = Object.keys(stats.yearlyStats).sort();
-		for (let i = 1; i < sortedYears.length; i++) {
-			const currentYear = sortedYears[i];
-			const previousYear = sortedYears[i - 1];
-			if (!currentYear || !previousYear) continue;
+		for (let i = 0; i < sortedYears.length; i++) {
+			const year = sortedYears[i];
+			if (!year) continue;
 			
-			const current = stats.yearlyStats[currentYear];
-			const previous = stats.yearlyStats[previousYear];
+			const current = stats.yearlyStats[year];
+			if (!current) continue;
 			
-			if (current && previous) {
-				current.change = current.count - previous.count;
-				current.changePercent = previous.count > 0 
-					? Math.round((current.change / previous.count) * 100) 
-					: (current.count > 0 ? 100 : 0);
+			if (current.count > 0) {
+				current.averageTimeToFinish = Math.round(current.averageTimeToFinish / current.count);
+			}
+			
+			// Calculate change from previous year
+			if (i > 0) {
+				const previousYear = sortedYears[i - 1];
+				const previous = previousYear ? stats.yearlyStats[previousYear] : null;
+				
+				if (previous) {
+					current.change = current.count - previous.count;
+					current.changePercent = previous.count > 0 
+						? Math.round((current.change / previous.count) * 100) 
+						: (current.count > 0 ? 100 : 0);
+				}
 			}
 		}
 
-		// Calculate changes (variation) for monthly stats
+		// Calculate average time to finish per period and changes for monthly stats
 		const sortedMonths = Object.keys(stats.monthlyStats).sort();
-		for (let i = 1; i < sortedMonths.length; i++) {
-			const currentMonth = sortedMonths[i];
-			const previousMonth = sortedMonths[i - 1];
-			if (!currentMonth || !previousMonth) continue;
+		for (let i = 0; i < sortedMonths.length; i++) {
+			const month = sortedMonths[i];
+			if (!month) continue;
 			
-			const current = stats.monthlyStats[currentMonth];
-			const previous = stats.monthlyStats[previousMonth];
+			const current = stats.monthlyStats[month];
+			if (!current) continue;
 			
-			if (current && previous) {
-				current.change = current.count - previous.count;
-				current.changePercent = previous.count > 0 
-					? Math.round((current.change / previous.count) * 100) 
-					: (current.count > 0 ? 100 : 0);
+			if (current.count > 0) {
+				current.averageTimeToFinish = Math.round(current.averageTimeToFinish / current.count);
+			}
+			
+			// Calculate change from previous month
+			if (i > 0) {
+				const previousMonth = sortedMonths[i - 1];
+				const previous = previousMonth ? stats.monthlyStats[previousMonth] : null;
+				
+				if (previous) {
+					current.change = current.count - previous.count;
+					current.changePercent = previous.count > 0 
+						? Math.round((current.change / previous.count) * 100) 
+						: (current.count > 0 ? 100 : 0);
+				}
 			}
 		}
 
@@ -308,12 +342,9 @@ export class StatisticsBasesView extends BasesViewBase {
 		cardsContainer.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;';
 
 		const cards = [
-			{ label: 'Total Books', value: this.stats!.totalBooks, color: 'var(--text-normal)' },
-			{ label: 'Reading', value: this.stats!.reading, color: 'var(--interactive-accent)' },
-			{ label: 'Unread', value: this.stats!.unread, color: 'var(--text-muted)' },
-			{ label: 'Finished', value: this.stats!.finished, color: 'var(--interactive-success)' },
-			{ label: 'Total Pages', value: this.stats!.totalPages.toLocaleString(), color: 'var(--text-normal)' },
-			{ label: 'Pages Read', value: this.stats!.readPages.toLocaleString(), color: 'var(--interactive-accent)' },
+			{ label: 'Total finished books', value: this.stats!.finished, color: 'var(--interactive-success)' },
+			{ label: 'Total pages read', value: this.stats!.readPages.toLocaleString(), color: 'var(--interactive-accent)' },
+			{ label: 'Total reading days', value: this.stats!.totalReadingDays, color: 'var(--text-accent)' },
 		];
 
 		cards.forEach(card => {
@@ -457,7 +488,7 @@ export class StatisticsBasesView extends BasesViewBase {
 			booksPages.style.cssText = 'font-size: 14px; color: var(--text-muted);';
 
 			const readingDaysSpan = doc.createElement('span');
-			readingDaysSpan.textContent = `${stat.readingDays} reading days`;
+			readingDaysSpan.textContent = `${stat.readingDays} reading days, Avg: ${stat.averageTimeToFinish} sessions`;
 			readingDaysSpan.style.cssText = 'font-size: 11px; color: var(--text-faint);';
 
 			rightContainer.appendChild(booksPages);
@@ -562,7 +593,7 @@ export class StatisticsBasesView extends BasesViewBase {
 			booksPages.style.cssText = 'font-size: 14px; color: var(--text-muted);';
 
 			const readingDaysSpan = doc.createElement('span');
-			readingDaysSpan.textContent = `${stat.readingDays} reading days`;
+			readingDaysSpan.textContent = `${stat.readingDays} reading days, Avg: ${stat.averageTimeToFinish} sessions`;
 			readingDaysSpan.style.cssText = 'font-size: 11px; color: var(--text-faint);';
 
 			rightContainer.appendChild(booksPages);
@@ -778,7 +809,7 @@ export class StatisticsBasesView extends BasesViewBase {
 		description.style.cssText = 'font-size: 11px; color: var(--text-muted); margin-bottom: 12px;';
 
 		const value = doc.createElement('div');
-		value.textContent = `${this.stats!.readingDays} days`;
+		value.textContent = `${this.stats!.totalReadingDays} days`;
 		value.style.cssText = 'font-size: 32px; font-weight: 600; color: var(--interactive-accent);';
 
 		section.appendChild(title);

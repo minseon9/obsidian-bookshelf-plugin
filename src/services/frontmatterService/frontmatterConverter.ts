@@ -4,27 +4,29 @@ import { getCurrentDateTime } from '../../utils/dateUtils';
 export class FrontmatterConverter {
 	static bookToFrontmatter(book: Book): Record<string, any> {
 		const frontmatter: Record<string, any> = {
-			title: book.title,
-			subtitle: book.subtitle,
-			author: book.author,
-			category: book.category,
-			publisher: book.publisher,
-			publish: book.publishDate,
-			cover: book.coverUrl,
-			status: book.status,
-			created: book.created,
-			updated: book.updated,
+			title: book.title || '',
+			subtitle: book.subtitle || '',
+			author: book.author || [],
+			category: book.category || [],
+			publisher: book.publisher || '',
+			publish: book.publishDate || '',
+			isbn: '',
+			cover: book.coverUrl || '',
+			total: 0,
+			status: book.status || 'unread',
+			read_page: book.readPage || 0,
 			read_started: book.readStarted || '',
 			read_finished: book.readFinished || '',
-			read_page: book.readPage || 0,
+			created: book.created || getCurrentDateTime(),
+			updated: book.updated || getCurrentDateTime(),
 		};
 
+		// Set total pages
 		if (book.totalPages !== undefined && book.totalPages !== null && !isNaN(book.totalPages)) {
 			frontmatter.total = book.totalPages;
-		} else {
-			frontmatter.total = 0;
 		}
 
+		// Set ISBN
 		const isbn = `${book.isbn10 || ''} ${book.isbn13 || ''}`.trim();
 		if (isbn) {
 			frontmatter.isbn = isbn;
