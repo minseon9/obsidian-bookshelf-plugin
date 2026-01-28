@@ -95,8 +95,8 @@ export class StatisticsBasesView extends BasesViewBase {
 			if (book.totalPages) stats.totalPages += book.totalPages;
 			if (book.readPage) stats.readPages += book.readPage;
 
-			// Categories
-			if (book.category && book.category.length > 0) {
+			// Categories (only count finished books)
+			if (book.status === 'finished' && book.category && book.category.length > 0) {
 				book.category.forEach((cat: string) => {
 					stats.categoryCounts[cat] = (stats.categoryCounts[cat] || 0) + 1;
 				});
