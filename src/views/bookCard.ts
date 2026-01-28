@@ -33,17 +33,20 @@ export class BookCard {
 	}
 
 	/**
-	 * Render reading book with cover image
+	 * Render reading book with cover image (enhanced with more info)
 	 */
 	private renderReadingBook(layout: 'grid' | 'list'): HTMLElement {
 		const card = document.createElement('div');
 		card.className = `bookshelf-book-card bookshelf-book-reading bookshelf-layout-${layout}`;
+		// Make card larger with more space for information
+		card.style.cssText = 'min-height: 420px; display: flex; flex-direction: column;';
 
-		// Cover image
+		// Cover image (larger)
 		if (this.book.coverUrl) {
 			const coverContainer = card.createEl('div', {
 				cls: 'bookshelf-book-cover',
 			});
+			coverContainer.style.cssText = 'width: 100%; height: 240px; margin-bottom: 16px; flex-shrink: 0;';
 
 			const coverImg = coverContainer.createEl('img', {
 				attr: {
@@ -51,51 +54,122 @@ export class BookCard {
 					alt: this.book.title || 'Book cover',
 				},
 			});
+			coverImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);';
 
 			coverImg.addEventListener('error', () => {
 				coverImg.style.display = 'none';
 			});
 		}
 
-		// Book info
+		// Book info container (flexible, takes remaining space)
 		const infoContainer = card.createEl('div', {
 			cls: 'bookshelf-book-info',
 		});
+		infoContainer.style.cssText = 'padding: 0 12px 12px 12px; flex: 1; display: flex; flex-direction: column;';
 
+		// Title
 		infoContainer.createEl('div', {
 			cls: 'bookshelf-book-title',
 			text: this.book.title,
-		});
+		}).style.cssText = 'font-size: 17px; font-weight: 600; margin-bottom: 8px; line-height: 1.4; color: var(--text-normal);';
 
+		// Author
 		if (this.book.author && this.book.author.length > 0) {
 			infoContainer.createEl('div', {
 				cls: 'bookshelf-book-author',
 				text: this.book.author.join(', '),
-			});
+			}).style.cssText = 'font-size: 13px; color: var(--text-muted); margin-bottom: 16px;';
 		}
 
-		// Progress bar
+		// Get last read date from book data
+		const lastReadDate = (this.book as any).lastReadDate;
+
+		// Reading status and dates section (always show for reading books)
+		const statusSection = infoContainer.createEl('div', {
+			cls: 'bookshelf-reading-status',
+		});
+		statusSection.style.cssText = 'font-size: 12px; color: var(--text-muted); margin-bottom: 16px; padding: 12px; background-color: var(--background-secondary); border-radius: 6px; display: flex; flex-direction: column; gap: 8px;';
+
+		// Started date (always show if available)
+		if (this.book.readStarted) {
+			const startedRow = statusSection.createEl('div');
+			startedRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+			const startedLabel = startedRow.createEl('span', { text: 'Started:' });
+			startedLabel.style.cssText = 'color: var(--text-faint); font-size: 11px;';
+			const startedValue = startedRow.createEl('span', { text: this.book.readStarted.split(' ')[0] });
+			startedValue.style.cssText = 'font-weight: 600; color: var(--text-normal); font-size: 12px;';
+		} else {
+			// Show placeholder if not started yet
+			const startedRow = statusSection.createEl('div');
+			startedRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+			const startedLabel = startedRow.createEl('span', { text: 'Started:' });
+			startedLabel.style.cssText = 'color: var(--text-faint); font-size: 11px;';
+			const startedValue = startedRow.createEl('span', { text: 'Not started' });
+			startedValue.style.cssText = 'font-weight: 400; color: var(--text-muted); font-size: 12px; font-style: italic;';
+		}
+
+		// Last read date (always show if available)
+		if (lastReadDate) {
+			const lastReadRow = statusSection.createEl('div');
+			lastReadRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+			const lastReadLabel = lastReadRow.createEl('span', { text: 'Last read:' });
+			lastReadLabel.style.cssText = 'color: var(--text-faint); font-size: 11px;';
+			const lastReadValue = lastReadRow.createEl('span', { text: lastReadDate });
+			lastReadValue.style.cssText = 'font-weight: 700; color: var(--interactive-accent); font-size: 12px;';
+		} else if (this.book.readStarted) {
+			// Show "Not yet" if started but no reading history
+			const lastReadRow = statusSection.createEl('div');
+			lastReadRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+			const lastReadLabel = lastReadRow.createEl('span', { text: 'Last read:' });
+			lastReadLabel.style.cssText = 'color: var(--text-faint); font-size: 11px;';
+			const lastReadValue = lastReadRow.createEl('span', { text: 'Not yet' });
+			lastReadValue.style.cssText = 'font-weight: 400; color: var(--text-muted); font-size: 12px; font-style: italic;';
+		}
+
+		// Progress section (enhanced)
 		if (this.book.totalPages && this.book.readPage !== undefined) {
 			const progress = Math.min((this.book.readPage / this.book.totalPages) * 100, 100);
+			const remainingPages = this.book.totalPages - this.book.readPage;
+			
 			const progressContainer = infoContainer.createEl('div', {
 				cls: 'bookshelf-progress-container',
 			});
+			progressContainer.style.cssText = 'margin-bottom: 16px;';
 
+			// Progress text with more details
+			const progressHeader = progressContainer.createEl('div');
+			progressHeader.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;';
+			
+			const progressLabel = progressHeader.createEl('div');
+			progressLabel.style.cssText = 'font-size: 12px; font-weight: 600; color: var(--text-normal);';
+			progressLabel.textContent = 'Progress';
+			
+			const progressPercent = progressHeader.createEl('div');
+			progressPercent.style.cssText = 'font-size: 14px; font-weight: 700; color: var(--interactive-accent);';
+			progressPercent.textContent = `${Math.round(progress)}%`;
+
+			// Progress bar
 			const progressBar = progressContainer.createEl('div', {
 				cls: 'bookshelf-progress-bar',
 			});
+			progressBar.style.cssText = 'width: 100%; height: 10px; background-color: var(--background-modifier-border); border-radius: 5px; overflow: hidden; margin-bottom: 6px;';
 
 			const progressFill = progressContainer.createEl('div', {
 				cls: 'bookshelf-progress-fill',
 			});
-			progressFill.style.width = `${progress}%`;
+			progressFill.style.cssText = `width: ${progress}%; height: 100%; background-color: var(--interactive-accent); transition: width 0.3s; border-radius: 5px;`;
 
 			progressBar.appendChild(progressFill);
 
-			progressContainer.createEl('div', {
-				cls: 'bookshelf-progress-text',
-				text: `${this.book.readPage} / ${this.book.totalPages} (${Math.round(progress)}%)`,
-			});
+			// Page details
+			const pageDetails = progressContainer.createEl('div');
+			pageDetails.style.cssText = 'display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);';
+			
+			const pagesRead = pageDetails.createEl('span');
+			pagesRead.textContent = `Read: ${this.book.readPage} pages`;
+			
+			const pagesRemaining = pageDetails.createEl('span');
+			pagesRemaining.textContent = `Remaining: ${remainingPages} pages`;
 		}
 
 		// Update progress button (for reading books)
@@ -103,11 +177,13 @@ export class BookCard {
 			const buttonContainer = infoContainer.createEl('div', {
 				cls: 'bookshelf-card-actions',
 			});
+			buttonContainer.style.cssText = 'margin-top: auto; padding-top: 12px;';
 
 			const updateButton = buttonContainer.createEl('button', {
 				cls: 'mod-cta',
 				text: 'Update Progress',
 			});
+			updateButton.style.cssText = 'width: 100%; padding: 10px; font-size: 13px; font-weight: 600;';
 
 			updateButton.addEventListener('click', (e) => {
 				e.stopPropagation(); // Prevent card click

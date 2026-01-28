@@ -1,5 +1,39 @@
 /* Bookshelf View Styles */
 
+/* Hide default Bases "New" button when Bookshelf view is active */
+.bookshelf-view-active .bases-toolbar-new-item-menu {
+	display: none !important;
+}
+
+/* Show Bookshelf "New Book" button */
+.bookshelf-bases-new-book-btn {
+	display: flex !important;
+}
+
+/* Ensure button is clickable */
+.bookshelf-bases-new-book-btn .text-icon-button {
+	cursor: pointer;
+	pointer-events: auto !important;
+	user-select: none;
+}
+
+.bookshelf-bases-new-book-btn .text-icon-button:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+/* Ensure views don't block navigation */
+.bookshelf-bases-view {
+	pointer-events: auto;
+	user-select: text;
+}
+
+/* Ensure list items are clickable */
+.bookshelf-unread-item,
+.bookshelf-list-container li {
+	cursor: pointer;
+	pointer-events: auto;
+}
+
 .bookshelf-header {
 	display: flex;
 	justify-content: space-between;
@@ -72,8 +106,8 @@
 .bookshelf-book-reading {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
-	text-align: center;
+	align-items: stretch;
+	text-align: left;
 }
 
 .bookshelf-book-cover {
@@ -81,11 +115,11 @@
 }
 
 .bookshelf-book-cover img {
-	width: 120px;
-	height: 180px;
+	width: 100%;
+	height: 100%;
 	object-fit: cover;
-	border-radius: 4px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	border-radius: 6px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .bookshelf-book-info {
@@ -93,22 +127,31 @@
 }
 
 .bookshelf-book-title {
-	font-size: 14px;
+	font-size: 17px;
 	font-weight: 600;
 	color: var(--text-normal);
-	margin-bottom: 5px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	margin-bottom: 8px;
+	line-height: 1.4;
+	word-wrap: break-word;
 }
 
 .bookshelf-book-author {
+	font-size: 13px;
+	color: var(--text-muted);
+	margin-bottom: 16px;
+	word-wrap: break-word;
+}
+
+.bookshelf-reading-status {
 	font-size: 12px;
 	color: var(--text-muted);
-	margin-bottom: 10px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	margin-bottom: 16px;
+	padding: 10px;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
 }
 
 /* Progress Bar */
@@ -133,9 +176,30 @@
 }
 
 .bookshelf-progress-text {
-	font-size: 11px;
-	color: var(--text-faint);
-	text-align: center;
+	font-size: 12px;
+	color: var(--text-normal);
+	font-weight: 500;
+	margin-bottom: 6px;
+}
+
+/* Notes input in progress modal */
+.bookshelf-notes-input {
+	width: 100%;
+	min-height: 300px;
+	padding: 12px;
+	font-size: 14px;
+	line-height: 1.6;
+	font-family: var(--font-text);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	resize: vertical;
+}
+
+.bookshelf-notes-input:focus {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -2px;
 }
 
 /* Book Card - Shelf (spine style for unread/finished) */
@@ -285,4 +349,43 @@
 
 .bookshelf-empty-state button {
 	margin-top: 10px;
+}
+
+/* Drag and Drop Styles */
+.bookshelf-drop-zone {
+	transition: background-color 0.2s;
+}
+
+.bookshelf-drop-zone.drag-over {
+	background-color: var(--background-modifier-hover);
+	border: 2px dashed var(--interactive-accent);
+}
+
+.bookshelf-unread-item {
+	transition: background-color 0.2s;
+}
+
+.bookshelf-unread-item:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.bookshelf-unread-item.dragging {
+	opacity: 0.5;
+}
+
+/* Unread Subsection */
+.bookshelf-unread-subsection {
+	margin-top: 32px;
+}
+
+.bookshelf-subsection-header {
+	user-select: none;
+}
+
+.bookshelf-subsection-header:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.bookshelf-unread-list {
+	transition: max-height 0.3s ease;
 }
