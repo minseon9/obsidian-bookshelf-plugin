@@ -272,11 +272,6 @@ export class BookshelfBasesView extends BasesViewBase {
 		dropZone.className = 'bookshelf-section-books bookshelf-layout-grid bookshelf-drop-zone';
 		dropZone.style.cssText = 'display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 40px; min-height: 200px; border: 2px dashed var(--background-modifier-border); border-radius: 8px; text-align: center; color: var(--text-muted); transition: all 0.2s;';
 
-		const icon = doc.createElement('div');
-		icon.textContent = '??';
-		icon.style.cssText = 'font-size: 3em; margin-bottom: 16px;';
-		dropZone.appendChild(icon);
-
 		const description = doc.createElement('p');
 		description.textContent = 'Drag a book from "To Read" section here to start reading';
 		description.style.cssText = 'margin: 0; font-size: 14px; font-weight: 500;';
@@ -568,12 +563,6 @@ export class BookshelfBasesView extends BasesViewBase {
 		const emptyState = doc.createElement('div');
 		emptyState.className = 'bookshelf-empty-state';
 		emptyState.style.cssText = 'display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center;';
-
-		const icon = doc.createElement('div');
-		icon.className = 'bookshelf-empty-icon';
-		icon.textContent = '??';
-		icon.style.cssText = 'font-size: 4em; margin-bottom: 16px;';
-		emptyState.appendChild(icon);
 
 		const title = doc.createElement('h2');
 		title.className = 'bookshelf-empty-title';
