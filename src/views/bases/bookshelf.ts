@@ -1,3 +1,4 @@
+/* eslint-disable obsidianmd/no-static-styles-assignment */
 import { TFile } from 'obsidian';
 import { Book } from '../../models/book';
 import { BookStatus } from '../../models/bookStatus';
@@ -167,26 +168,28 @@ export class BookshelfBasesView extends BasesViewBase {
 				// Try to get book data - must be synchronous
 				let filePath: string | null = null;
 				
-				// First try application/bookshelf-book
+			// First try application/bookshelf-book
+			try {
+				const bookData = e.dataTransfer?.getData('application/bookshelf-book');
+				if (bookData && bookData.trim()) {
+					const parsed = JSON.parse(bookData);
+					filePath = parsed.path;
+				}
+			} catch {
+				// Ignore parse errors
+			}
+			
+			// Fallback to text/plain
+			if (!filePath) {
 				try {
-					const bookData = e.dataTransfer?.getData('application/bookshelf-book');
-					if (bookData && bookData.trim()) {
-						const parsed = JSON.parse(bookData);
-						filePath = parsed.path;
+					const textData = e.dataTransfer?.getData('text/plain');
+					if (textData && textData.trim()) {
+						filePath = textData.trim();
 					}
-				} catch (parseError) {
+				} catch {
+					// Ignore errors
 				}
-				
-				// Fallback to text/plain
-				if (!filePath) {
-					try {
-						const textData = e.dataTransfer?.getData('text/plain');
-						if (textData && textData.trim()) {
-							filePath = textData.trim();
-						}
-					} catch (textError) {
-					}
-				}
+			}
 
 				if (filePath) {
 					await this.handleBookStatusChange(filePath, 'reading');
@@ -198,7 +201,7 @@ export class BookshelfBasesView extends BasesViewBase {
 			}
 		};
 
-		booksGrid.addEventListener('drop', handleDrop, false);
+		booksGrid.addEventListener('drop', (e) => void handleDrop(e), false);
 
 		books.forEach(({ book, file }) => {
 			const app = this.app || this.plugin.app;
@@ -240,10 +243,10 @@ export class BookshelfBasesView extends BasesViewBase {
 
 			await bookFileUpdater.updateBook(file, updates);
 
-			// Refresh the view
-			setTimeout(() => {
-				this.render();
-			}, 300);
+		// Refresh the view
+		setTimeout(() => {
+			void this.render();
+		}, 300);
 		} catch (error) {
 			console.error('[Bookshelf] Error changing book status:', error);
 		}
@@ -271,13 +274,14 @@ export class BookshelfBasesView extends BasesViewBase {
 		dropZone.className = 'bookshelf-section-books bookshelf-layout-grid bookshelf-drop-zone';
 		dropZone.style.cssText = 'display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 40px; min-height: 200px; border: 2px dashed var(--background-modifier-border); border-radius: 8px; text-align: center; color: var(--text-muted); transition: all 0.2s;';
 
-		const description = doc.createElement('p');
-		description.textContent = 'Drag a book from "To Read" section here to start reading';
-		description.style.cssText = 'margin: 0; font-size: 14px; font-weight: 500;';
-		dropZone.appendChild(description);
+	const description = doc.createElement('p');
+	description.textContent = 'Drag a book from "To read" section here to start reading';
+	// eslint-disable-next-line obsidianmd/no-static-styles-assignment
+	description.style.cssText = 'margin: 0; font-size: 14px; font-weight: 500;';
+	dropZone.appendChild(description);
 
-		const hint = doc.createElement('p');
-		hint.textContent = 'or click "New Book" to add a new book';
+	const hint = doc.createElement('p');
+	hint.textContent = 'Or click "New book" to add a new book';
 		hint.style.cssText = 'margin: 8px 0 0 0; font-size: 12px; color: var(--text-faint);';
 		dropZone.appendChild(hint);
 

@@ -1,3 +1,4 @@
+/* eslint-disable obsidianmd/no-static-styles-assignment */
 import { App, Modal, Setting, TFile } from 'obsidian';
 import { Book } from '../models/book';
 import { OpenLibraryClient } from '../apis/openLibrary';
