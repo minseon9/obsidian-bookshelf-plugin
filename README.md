@@ -1,90 +1,108 @@
-# Obsidian Sample Plugin
+# Obsidian Bookshelf
+A reading tracker for importing books from Open Library, organizing your reading shelves, and analyzing your reading habits.
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+## Overview
+Bookshelf helps you manage your personal library in Obsidian. Each book is stored as a Markdown note with YAML frontmatter, making it easy to integrate with your existing notes and workflows. Search and import books directly from Open Library API with automatic metadata fetching.  
+Track your reading progress with page numbers and notes, which are automatically recorded in your book notes. View your library through customizable Bases views (Bookshelf, Library, Statistics) that let you organize books by reading status and analyze your reading habits over time.
+![overview](./docs/assets/overview.gif)
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Quick start
+1. **Add a book**: Click ribbon icon or `Ctrl/Cmd+P` → "Search Book"
+2. **Update progress**: Open book note → Click "Progress update" button
+3. **View library**: Open `base` files in `Bookshelf/Views/`
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+## Features
 
-## First time developing plugins?
+### 📚 Search and Add
+![Book Search](./docs/assets/book_search.png)
+- Search and import from Open Library API
+- Auto-fetch metadata (title, author, publisher, ISBN, cover)
 
-Quick starting guide for new plugin devs:
+### 🎨 Manage Reading Books 
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+![Bookshelf View](./docs/assets/bookshelf.png)
 
-## Releasing new releases
+- Drag & drop books from "To Read" to "Reading" section to start tracking
+- Click "Update Progress" button to record reading sessions and update progress
+- Each session automatically adds to reading history
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+![Book Note](./docs/assets/books.png)
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+- Each book stored as Markdown note with YAML frontmatter
+- Reading history recorded in note body
+- All metadata and progress tracked automatically
 
-## Adding your plugin to the community plugin list
+### 📖 Library for Unread and Finished Books
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+![Library](./docs/assets/library.png)
 
-## How to use
+- View all books not currently reading (unread and finished)
+- Browse complete collection by status
+- Quick access to book details and metadata
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+### 📊 Statistics & Analytics
+![Statistics View](./docs/assets/reading-statistics.png)
+- **Overall**: Total books, pages, reading days
+- **Time-based**: Yearly/monthly trends with line graphs
+- **Category**: Top 10 categories with bar charts
 
-## Manually installing the plugin
+## Book Properties
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+Each book note uses this frontmatter:
 
-## Improve code quality with eslint
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+```yaml
+---
+title: Book Title
+author: [Author Name]
+category: [Fiction, Fantasy]
+publisher: Publisher Name
+isbn: "1234567890"
+cover: https://covers.openlibrary.org/...
+total: 400                          # Total pages
+status: reading                     # unread/reading/finished
+read_page: 150                      # Current page
+read_started: 2026-01-28 10:00:00   # Start date
+read_finished: null                 # Finish date (null if not finished)
+created: 2026-01-28 10:00:00        # Creation date (immutable)
+updated: 2026-01-28 15:30:00        # Last update
+reading_history_summary:
+  - date: 2026-01-28
+    startPage: 0
+    endPage: 150
+    pagesRead: 150
+    timestamp: 2026-01-28 15:30:00
+---
 ```
 
-If you have multiple URLs, you can also do:
+### Property Descriptions
+- `title`: Book title
+- `author`: List of authors
+- `category`: List of categories/genres
+- `publisher`: Publisher name
+- `publish`: Publication date
+- `isbn`: ISBN number
+- `cover`: Cover image URL
+- `total`: Total pages
+- `status`: Reading status (`unread`, `reading`, `finished`)
+- `read_page`: Current page number
+- `read_started`: Date when reading started
+- `read_finished`: Date when finished (null if not finished)
+- `created`: Note creation timestamp (immutable)
+- `updated`: Last update timestamp
+- `reading_history_summary`: Array of reading sessions
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
+## Reading History Format
+
+Reading history is stored in the note body:
+
+```markdown
+## Reading History
+
+### 2026-01-28
+- **Pages**: 0 → 150 (150 pages)
+- **Time**: 2026-01-28 15:30:00
+- **Notes**: Started reading this amazing book!
 ```
 
-## API Documentation
-
-See https://docs.obsidian.md
+## Support
+- 🐛 [Report bugs or suggest features](https://github.com/minseon9/obsidian-bookshelf-plugin/issues)

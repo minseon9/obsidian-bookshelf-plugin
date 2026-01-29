@@ -1,0 +1,56 @@
+# Documentation Assets
+
+This directory contains images and assets for plugin documentation.
+
+## Current Files
+
+- **icon.png** (128x128): Plugin icon for Community Plugins list
+
+## Screenshots Needed
+
+### Recommended Image Sizes
+- **Screenshots**: 1920x1080 or 1280x720
+- **GIFs**: Max 10MB, 1280x720 recommended
+- **Format**: PNG for screenshots, GIF for animations
+
+### What to Capture
+
+1. **demo-search.gif**: 
+   - Show opening search modal
+   - Type search query
+   - Display results
+   - Click to add book
+
+2. **demo-progress.png**:
+   - Book card with progress bar
+   - Show percentage and pages
+   - Display dates and status
+
+3. **demo-statistics.png**:
+   - Full statistics view
+   - Show graphs with data
+   - Display all three sections
+
+4. **demo-bookshelf.png**:
+   - Main bookshelf view
+   - Show multiple books in grid
+   - Display both sections (To Read, Reading)
+
+5. **demo-progress-modal.png**:
+   - Progress update modal open
+   - Show input fields
+   - Display success message
+
+## Directory Structure
+
+```
+docs/
+??? assets/
+    ??? .gitkeep
+    ??? icon.png              (Plugin icon)
+    ??? demo-search.gif       (TODO)
+    ??? demo-progress.png     (TODO)
+    ??? demo-statistics.png   (TODO)
+    ??? demo-bookshelf.png    (TODO)
+    ??? demo-progress-modal.png (TODO)
+```
