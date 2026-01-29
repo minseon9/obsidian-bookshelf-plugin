@@ -63,10 +63,11 @@ export interface GroupOption {
 	items: ViewOption[];
 }
 
+// Using 'unknown' for controller and view types to avoid conflicts with Obsidian's internal types
 export interface BasesViewRegistration {
 	name: string;
 	icon: string;
-	factory: (controller: any, containerEl: HTMLElement) => any;
+	factory: (controller: unknown, containerEl: HTMLElement) => unknown;
 	options?: () => ViewOption[];
 }
 

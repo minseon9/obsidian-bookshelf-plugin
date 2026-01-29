@@ -1,6 +1,5 @@
 import { App, TFile } from 'obsidian';
 import { Book } from '../../models/book';
-import { ReadingRecord } from '../../models/readingRecord';
 import { FrontmatterParser } from '../frontmatterService/frontmatterParser';
 import { FrontmatterConverter } from '../frontmatterService/frontmatterConverter';
 import { FrontmatterCreator } from '../frontmatterService/frontmatterCreator';
@@ -60,9 +59,10 @@ export class BookFileUpdater {
 
 		const existingHistory = ReadingHistoryManager.parseFromBody(body);
 		const lastRecord = existingHistory.length > 0 ? existingHistory[existingHistory.length - 1] : null;
+		const readPageValue = typeof frontmatter.read_page === 'number' ? frontmatter.read_page : 0;
 		const recordStartPage = startPage !== undefined 
 			? startPage 
-			: (lastRecord?.endPage ?? frontmatter.read_page ?? 0);
+			: (lastRecord?.endPage ?? readPageValue);
 
 		const newRecord = ReadingHistoryManager.createRecord(recordStartPage, endPage, notes);
 		existingHistory.push(newRecord);
@@ -76,7 +76,8 @@ export class BookFileUpdater {
 			startPage: newRecord.startPage,
 			endPage: newRecord.endPage,
 			pagesRead: newRecord.pagesRead,
-			timestamp: newRecord.timestamp,
+			timestamp: newRecord.timestamp || '',
+			notes: newRecord.notes,
 		});
 
 		const updatedBody = ReadingHistoryManager.updateInBody(body, existingHistory);

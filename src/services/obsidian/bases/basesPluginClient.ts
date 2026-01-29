@@ -1,9 +1,28 @@
 import {App, Plugin} from "obsidian";
 import {BasesAPI, BasesViewRegistration} from "./basesTypes";
 
+interface InternalPluginsManager {
+	getEnabledPluginById?: (id: string) => BasesInternalPlugin | undefined;
+	[key: string]: unknown;
+}
+
+interface BasesInternalPlugin {
+	registrations?: Record<string, BasesViewRegistration>;
+	manifest?: {
+		version?: string;
+		[key: string]: unknown;
+	};
+	[key: string]: unknown;
+}
+
+interface AppWithInternals extends App {
+	internalPlugins?: InternalPluginsManager;
+}
+
 export function getBasesAPI(app: App): BasesAPI | null {
 	try {
-		const internalPlugins = (app as any).internalPlugins;
+		const appWithInternals = app as AppWithInternals;
+		const internalPlugins = appWithInternals.internalPlugins;
 		if (!internalPlugins) {
 			console.debug("[Bookshelf][Bases] Internal plugins manager not available");
 			return null;
@@ -33,14 +52,19 @@ export function getBasesAPI(app: App): BasesAPI | null {
 	}
 }
 
+interface PluginWithBasesAPI {
+	registerBasesView?: (viewId: string, registration: BasesViewRegistration) => boolean;
+}
+
 export function registerBasesView(
 	plugin: Plugin,
 	viewId: string,
 	registration: BasesViewRegistration
 ): boolean {
-	if (typeof (plugin as any).registerBasesView === "function") {
+	const pluginWithAPI = plugin as unknown as PluginWithBasesAPI;
+	if (typeof pluginWithAPI.registerBasesView === "function") {
 		try {
-			const success = (plugin as any).registerBasesView(viewId, registration);
+			const success = pluginWithAPI.registerBasesView(viewId, registration);
 			if (success) {
 				console.debug(
 					`[Bookshelf][Bases] Successfully registered view via public API: ${viewId}`
@@ -51,8 +75,9 @@ export function registerBasesView(
 				`[Bookshelf][Bases] Public API returned false (Bases may be disabled)`
 			);
 			return false;
-		} catch (error: any) {
-			if (error?.message?.includes("already exists")) {
+		} catch (error) {
+			const err = error as Error;
+			if (err?.message?.includes("already exists")) {
 				console.debug(
 					`[Bookshelf][Bases] View ${viewId} already registered via public API`
 				);

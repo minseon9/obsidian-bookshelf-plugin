@@ -1,6 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import BookshelfPlugin from "../main";
-import type { BookshelfSettings } from "./types";
 
 export class BookshelfSettingTab extends PluginSettingTab {
 	plugin: BookshelfPlugin;
@@ -13,9 +12,9 @@ export class BookshelfSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		containerEl.createEl('h2', { text: 'Bookshelf Settings' });
-
-		containerEl.createEl('h3', { text: 'Folder Settings' });
+		
+		new Setting(containerEl).setName('Bookshelf settings').setHeading();
+		new Setting(containerEl).setName('Folder settings').setHeading();
 		new Setting(containerEl)
 			.setName('Book notes folder')
 			.setDesc('Folder path where book notes will be saved')
@@ -27,7 +26,7 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		containerEl.createEl('h3', { text: 'API Settings' });
+		new Setting(containerEl).setName('API settings').setHeading();
 		new Setting(containerEl)
 			.setName('API timeout (ms)')
 			.setDesc('Timeout duration for Open Library API requests (in milliseconds)')
@@ -56,7 +55,7 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		containerEl.createEl('h3', { text: 'Auto Update' });
+		new Setting(containerEl).setName('Auto update').setHeading();
 		new Setting(containerEl)
 			.setName('Auto update timestamp')
 			.setDesc('Whether to automatically update the updated field when book information is modified')
@@ -72,7 +71,7 @@ export class BookshelfSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Auto status change')
-			.setDesc('Automatically change status to "finished" when read_page reaches totalPages')
+			.setDesc('Automatically change status to "finished" when read_page reaches total pages')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.autoStatusChange)
 				.onChange(async (value) => {
@@ -90,7 +89,7 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		containerEl.createEl('h3', { text: 'Reading History' });
+		new Setting(containerEl).setName('Reading history').setHeading();
 		new Setting(containerEl)
 			.setName('Track reading history')
 			.setDesc('Whether to track reading history (pages read per session)')
@@ -111,10 +110,10 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		containerEl.createEl('h3', { text: 'Bookshelf View' });
+		new Setting(containerEl).setName('Bookshelf view').setHeading();
 		new Setting(containerEl)
 			.setName('Default sort')
-			.setDesc('Default sort order for Bookshelf View')
+			.setDesc('Default sort order for bookshelf view')
 			.addDropdown(dropdown => dropdown
 				.addOption('date', 'Date')
 				.addOption('title', 'Title')
@@ -126,7 +125,7 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		containerEl.createEl('h3', { text: 'Default Values' });
+		new Setting(containerEl).setName('Default values').setHeading();
 		new Setting(containerEl)
 			.setName('Default reading status')
 			.setDesc('Default reading status for newly added books')
@@ -139,7 +138,7 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		containerEl.createEl('h3', { text: 'Date & Time' });
+		new Setting(containerEl).setName('Date & time').setHeading();
 		new Setting(containerEl)
 			.setName('Timezone offset')
 			.setDesc('Timezone offset from UTC in hours (e.g., 0 for UTC, 9 for KST, -5 for EST)')

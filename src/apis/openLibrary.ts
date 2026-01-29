@@ -17,7 +17,7 @@ export class OpenLibraryClient {
 			const url = `${this.baseUrl}/search.json?q=${encodedQuery}&limit=${limit}&offset=${offset}`;
 			const data = await this.httpClient.get<OpenLibrarySearchResponse>(url);
 			return this.convertSearchDocsToBooks(data.docs);
-		} catch (error) {
+		} catch {
 			throw new Error(`Failed to search books. Please try again later.`);
 		}
 	}
@@ -47,7 +47,7 @@ export class OpenLibraryClient {
 		try {
 			const workUrl = `${this.baseUrl}${firstWork.key}.json`;
 			return await this.httpClient.get<OpenLibraryWork>(workUrl);
-		} catch (e) {
+		} catch {
 			return null;
 		}
 	}

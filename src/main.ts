@@ -48,19 +48,19 @@ export default class BookshelfPlugin extends Plugin {
 
 		// Add command to open view
 		this.addCommand({
-			id: 'bookshelf-open-view',
-			name: 'Open Bookshelf',
+			id: 'open-view',
+			name: 'Open view',
 			callback: () => {
-				this.activateView();
+				void this.activateView();
 			},
 		});
 
 		// Add Ribbon icons (Left Navigation Bar)
-		this.addRibbonIcon('book-open-text', 'Open Bookshelf', () => {
-			this.activateView();
+		this.addRibbonIcon('book-open-text', 'Open bookshelf', () => {
+			void this.activateView();
 		});
 
-		this.addRibbonIcon('book-plus', 'Search and Add Book', () => {
+		this.addRibbonIcon('book-plus', 'Search and add book', () => {
 			const modal = new SearchModal(this.app, this);
 			modal.open();
 		});
@@ -69,7 +69,7 @@ export default class BookshelfPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('file-open', (file) => {
 				if (file instanceof TFile) {
-					this.addProgressButtonToNote(file);
+					void this.addProgressButtonToNote(file);
 				}
 			})
 		);
@@ -77,7 +77,7 @@ export default class BookshelfPlugin extends Plugin {
 		// Add button to currently open file if it's a book note
 		const activeFile = this.app.workspace.getActiveFile();
 		if (activeFile) {
-			this.addProgressButtonToNote(activeFile);
+			void this.addProgressButtonToNote(activeFile);
 		}
 
 		// Register auto-update timestamp if enabled
@@ -104,8 +104,8 @@ export default class BookshelfPlugin extends Plugin {
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (!view) return;
 
-			// Try to find header element
-			const viewEl = (view as any).containerEl || (view as any).contentEl;
+			// Try to find header element using containerEl
+			const viewEl = view.containerEl;
 			if (!viewEl) return;
 
 			// Find or create action items container
@@ -117,13 +117,15 @@ export default class BookshelfPlugin extends Plugin {
 					actionContainer = header;
 				} else {
 					// Create container at the top of content
-					actionContainer = viewEl.querySelector('.markdown-source-view') || viewEl.querySelector('.markdown-preview-view');
-					if (!actionContainer) return;
+					const contentContainer = viewEl.querySelector('.markdown-source-view') || viewEl.querySelector('.markdown-preview-view');
+					if (!contentContainer) return;
 					
-					const buttonContainer = actionContainer.createEl('div', {
+					const buttonContainer = contentContainer.createEl('div', {
 						cls: 'bookshelf-action-container',
 					});
-					actionContainer.insertBefore(buttonContainer, actionContainer.firstChild);
+					if (contentContainer.firstChild) {
+						contentContainer.insertBefore(buttonContainer, contentContainer.firstChild);
+					}
 					actionContainer = buttonContainer;
 				}
 			}
@@ -136,7 +138,7 @@ export default class BookshelfPlugin extends Plugin {
 		// Add button
 		const button = actionContainer.createEl('button', {
 			cls: 'bookshelf-progress-button mod-cta',
-			text: 'Update Progress',
+			text: 'Update progress',
 		});
 
 		button.addEventListener('click', () => {
@@ -150,8 +152,8 @@ export default class BookshelfPlugin extends Plugin {
 		}, 200);
 	}
 
-	async onunload() {
-		unregisterBasesViews(this);
+	onunload(): void {
+		void unregisterBasesViews(this);
 	}
 
 	/**
@@ -200,7 +202,7 @@ export default class BookshelfPlugin extends Plugin {
 		);
 	}
 
-	async activateView() {
+	async activateView(): Promise<void> {
 		const { workspace } = this.app;
 		const viewsFolder = PathManager.getViewsFolderPath(this.settings.bookFolder);
 		const baseFilePath = normalizePath(`${viewsFolder}/bookshelf-default.base`);
@@ -210,7 +212,7 @@ export default class BookshelfPlugin extends Plugin {
 		if (baseFile && baseFile instanceof TFile) {
 			// Open the .base file in a new leaf
 			const leaf = workspace.getRightLeaf(false) || workspace.getLeaf(true);
-			await leaf.openFile(baseFile);
+			void leaf.openFile(baseFile);
 			workspace.revealLeaf(leaf);
 		}
 	}

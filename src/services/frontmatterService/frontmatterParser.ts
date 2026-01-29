@@ -1,7 +1,8 @@
 import * as yaml from 'js-yaml';
+import { Frontmatter, ReadingHistorySummaryItem } from './types';
 
 export class FrontmatterParser {
-	static parse(content: string): Record<string, any> {
+	static parse(content: string): Frontmatter {
 		const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
 		const match = content.match(frontmatterRegex);
 
@@ -12,23 +13,25 @@ export class FrontmatterParser {
 		const frontmatterText = match[1];
 
 		try {
-			const parsed = yaml.load(frontmatterText, { schema: yaml.DEFAULT_SCHEMA }) as Record<string, any> | null;
+			const parsed = yaml.load(frontmatterText, { schema: yaml.DEFAULT_SCHEMA }) as Record<string, unknown> | null;
 			if (!parsed || typeof parsed !== 'object') {
 				return {};
 			}
 
-			const frontmatter: Record<string, any> = {};
+			const frontmatter: Frontmatter = {};
 			for (const [key, value] of Object.entries(parsed)) {
 				if (key === 'reading_history') continue;
 
 				if (key === 'reading_history_summary') {
-					frontmatter[key] = FrontmatterParser.normalizeReadingHistorySummary(value);
+					frontmatter[key] = FrontmatterParser.normalizeReadingHistorySummary(value) as ReadingHistorySummaryItem[];
 					continue;
 				}
 
 				if (value === '') {
-					if (key === 'title' || key === 'author' || key === 'status') {
+					if (key === 'title' || key === 'status') {
 						frontmatter[key] = value;
+					} else if (key === 'author') {
+						frontmatter[key] = [];
 					}
 					continue;
 				}
@@ -43,7 +46,7 @@ export class FrontmatterParser {
 		}
 	}
 
-	static extract(content: string): { frontmatter: Record<string, any>; body: string } {
+	static extract(content: string): { frontmatter: Frontmatter; body: string } {
 		const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
 		const match = content.match(frontmatterRegex);
 
@@ -57,12 +60,12 @@ export class FrontmatterParser {
 		return { frontmatter, body };
 	}
 
-	private static normalizeReadingHistorySummary(value: any): any[] {
+	private static normalizeReadingHistorySummary(value: unknown): unknown[] {
 		if (value === null || value === undefined || value === '') {
 			return [];
 		}
 		if (Array.isArray(value)) {
-			return value.filter((item: any) => item && typeof item === 'object' && !Array.isArray(item));
+			return value.filter((item) => item && typeof item === 'object' && !Array.isArray(item));
 		}
 		return [];
 	}

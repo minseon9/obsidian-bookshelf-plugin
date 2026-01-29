@@ -42,7 +42,7 @@ export class TemplateProcessor {
 		let result = template;
 		result = result.replace(/<%[\s\S]*?%>/g, '');
 		result = result.replace(/^%%[\s\S]*?%%$/gm, '');
-		result = result.replace(/\{\{DATE:([^}]+)\}\}/g, (match, format) => {
+		result = result.replace(/\{\{DATE:([^}]+)\}\}/g, (_match, format: string) => {
 			return formatDate(new Date(), format);
 		});
 		for (const [key, value] of Object.entries(data)) {

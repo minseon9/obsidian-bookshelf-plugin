@@ -23,7 +23,7 @@ export class ValidationUtils {
 		}
 
 		if (!fixed.title || fixed.title.trim().length === 0) {
-			fixed.title = 'Unknown Title';
+			fixed.title = 'Unknown title';
 		}
 
 		return fixed;

@@ -157,7 +157,7 @@ export interface OpenLibraryEdition {
 		type: string;
 		value: string;
 	} | string;
-	classifications?: Record<string, any>;
+	classifications?: Record<string, unknown>;
 	lc_classifications?: string[];
 	physical_format?: string;
 	oclc_numbers?: string[];

@@ -60,22 +60,22 @@ export async function registerBasesBookshelfView(plugin: BookshelfPlugin): Promi
 				return false;
 			}
 
-			// Refresh existing Bases views
-			plugin.app.workspace.iterateAllLeaves((leaf: any) => {
-				if (leaf.view?.getViewType?.() === "bases") {
-					const view = leaf.view as any;
-					if (typeof view.refresh === "function") {
-						try {
-							view.refresh();
-						} catch (refreshError) {
-							console.debug(
-								"[Bookshelf][Bases] Error refreshing view:",
-								refreshError
-							);
-						}
+		// Refresh existing Bases views
+		plugin.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view?.getViewType?.() === "bases") {
+				const view = leaf.view as { refresh?: () => void };
+				if (typeof view.refresh === "function") {
+					try {
+						view.refresh();
+					} catch (refreshError) {
+						console.debug(
+							"[Bookshelf][Bases] Error refreshing view:",
+							refreshError
+						);
 					}
 				}
-			});
+			}
+		});
 
 			return true;
 		} catch (error) {

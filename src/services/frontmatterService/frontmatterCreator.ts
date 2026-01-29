@@ -1,8 +1,9 @@
 import * as yaml from 'js-yaml';
+import { Frontmatter } from './types';
 
 export class FrontmatterCreator {
-	static create(data: Record<string, any>): string {
-		const yamlData: Record<string, any> = {};
+	static create(data: Frontmatter): string {
+		const yamlData: Record<string, unknown> = {};
 
 		for (const [key, value] of Object.entries(data)) {
 			if (value === undefined || value === null) continue;
@@ -24,7 +25,7 @@ export class FrontmatterCreator {
 				}
 
 				if (key === 'reading_history_summary') {
-					const validItems = value.filter((item: any) => 
+					const validItems = value.filter((item) => 
 						item && typeof item === 'object' && !Array.isArray(item)
 					);
 					yamlData[key] = validItems.length > 0 ? validItems : [];

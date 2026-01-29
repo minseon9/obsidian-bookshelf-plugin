@@ -1,12 +1,13 @@
 import { Book } from '../../models/book';
 import { getCurrentDateTime } from '../../utils/dateUtils';
+import { Frontmatter } from './types';
 
 export class FrontmatterConverter {
-	static bookToFrontmatter(book: Book): Record<string, any> {
+	static bookToFrontmatter(book: Book): Frontmatter {
 		const now = getCurrentDateTime();
 		const created = book.created || now;
 		
-		const frontmatter: Record<string, any> = {
+		const frontmatter: Frontmatter = {
 			title: book.title || '',
 			subtitle: book.subtitle || '',
 			author: book.author || [],
@@ -38,10 +39,13 @@ export class FrontmatterConverter {
 		return frontmatter;
 	}
 
-	static frontmatterToBook(frontmatter: Record<string, any>): Partial<Book> {
+	static frontmatterToBook(frontmatter: Frontmatter): Partial<Book> {
 		const { isbn10, isbn13 } = FrontmatterConverter.extractIsbn(frontmatter.isbn);
 		const calculatedReadPage = FrontmatterConverter.calculateReadPage(frontmatter);
 
+		const status = frontmatter.status;
+		const validStatus = status === 'unread' || status === 'reading' || status === 'finished' ? status : 'unread';
+		
 		return {
 			title: frontmatter.title || '',
 			subtitle: frontmatter.subtitle,
@@ -53,16 +57,16 @@ export class FrontmatterConverter {
 			isbn10,
 			isbn13,
 			coverUrl: frontmatter.cover,
-			status: frontmatter.status || 'unread',
+			status: validStatus,
 			readPage: calculatedReadPage,
 			readStarted: frontmatter.read_started,
-			readFinished: frontmatter.read_finished,
+			readFinished: frontmatter.read_finished !== null ? frontmatter.read_finished : undefined,
 			created: frontmatter.created || getCurrentDateTime(),
 			updated: frontmatter.updated || getCurrentDateTime(),
 		};
 	}
 
-	private static extractIsbn(isbnField: any): { isbn10?: string; isbn13?: string } {
+	private static extractIsbn(isbnField: string | undefined): { isbn10?: string; isbn13?: string } {
 		let isbn10: string | undefined;
 		let isbn13: string | undefined;
 		if (isbnField) {
@@ -75,11 +79,11 @@ export class FrontmatterConverter {
 		return { isbn10, isbn13 };
 	}
 
-	private static calculateReadPage(frontmatter: Record<string, any>): number {
+	private static calculateReadPage(frontmatter: Frontmatter): number {
 		let readPage = typeof frontmatter.read_page === 'number' ? frontmatter.read_page : 0;
 		if (frontmatter.reading_history_summary && Array.isArray(frontmatter.reading_history_summary)) {
 			const totalFromHistory = frontmatter.reading_history_summary.reduce(
-				(sum: number, record: any) => sum + (record.pagesRead || 0),
+				(sum, record) => sum + (record.pagesRead || 0),
 				0
 			);
 			if (totalFromHistory > readPage) {
