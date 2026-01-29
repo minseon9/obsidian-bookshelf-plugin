@@ -1,4 +1,3 @@
-/* eslint-disable obsidianmd/no-static-styles-assignment */
 import {App, Modal, Setting} from 'obsidian';
 import {Book} from '../models/book';
 import {ReadingRecord} from '../models/readingRecord';

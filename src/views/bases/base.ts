@@ -124,7 +124,6 @@ export abstract class BasesViewBase extends Component {
 		// Just create our root element inside it
 		const rootEl = doc.createElement("div");
 		rootEl.className = "bookshelf-bases-view";
-		// eslint-disable-next-line obsidianmd/no-static-styles-assignment
 		rootEl.style.cssText = "display: flex; flex-direction: column; height: 100%; width: 100%;";
 		rootEl.tabIndex = -1; // Make focusable without adding to tab order
 		this.containerEl.appendChild(rootEl);
@@ -469,7 +468,6 @@ export abstract class BasesViewBase extends Component {
 
 		const errorEl = doc.createElement("div");
 		errorEl.className = "bookshelf-error";
-		// eslint-disable-next-line obsidianmd/no-static-styles-assignment
 		errorEl.style.cssText = "padding: 20px; text-align: center; color: var(--text-error);";
 		errorEl.textContent = `Error: ${error.message}`;
 		this.rootElement.appendChild(errorEl);

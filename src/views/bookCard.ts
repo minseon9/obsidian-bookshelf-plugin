@@ -1,4 +1,3 @@
-/* eslint-disable obsidianmd/no-static-styles-assignment */
 import { App, TFile } from 'obsidian';
 import { Book } from '../models/book';
 import BookshelfPlugin from '../main';

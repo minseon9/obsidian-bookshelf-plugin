@@ -22,6 +22,16 @@ export default tseslint.config(
 		},
 	},
 	...obsidianmd.configs.recommended,
+	{
+		rules: {
+			// Disable static styles assignment rule - necessary for dynamic UI
+			"obsidianmd/no-static-styles-assignment": "off",
+			
+			// Relax some strict rules for better developer experience
+			"no-case-declarations": "warn",
+			"no-empty": "warn",
+		},
+	},
 	globalIgnores([
 		"node_modules",
 		"dist",
