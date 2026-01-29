@@ -212,7 +212,7 @@ export default class BookshelfPlugin extends Plugin {
 		if (baseFile && baseFile instanceof TFile) {
 			// Open the .base file in a new leaf
 			const leaf = workspace.getRightLeaf(false) || workspace.getLeaf(true);
-			void leaf.openFile(baseFile);
+			await leaf.openFile(baseFile);
 			workspace.revealLeaf(leaf);
 		}
 	}

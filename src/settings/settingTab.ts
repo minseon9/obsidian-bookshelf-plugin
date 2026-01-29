@@ -13,8 +13,8 @@ export class BookshelfSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 		
-		new Setting(containerEl).setName('Bookshelf settings').setHeading();
-		new Setting(containerEl).setName('Folder settings').setHeading();
+		new Setting(containerEl).setName('General').setHeading();
+		new Setting(containerEl).setName('Folders').setHeading();
 		new Setting(containerEl)
 			.setName('Book notes folder')
 			.setDesc('Folder path where book notes will be saved')
@@ -26,9 +26,9 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		new Setting(containerEl).setName('API settings').setHeading();
+		new Setting(containerEl).setName('API').setHeading();
 		new Setting(containerEl)
-			.setName('API timeout (ms)')
+			.setName('Timeout (ms)')
 			.setDesc('Timeout duration for Open Library API requests (in milliseconds)')
 			.addText(text => text
 				.setPlaceholder('5000')
@@ -110,9 +110,9 @@ export class BookshelfSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		new Setting(containerEl).setName('Bookshelf view').setHeading();
+		new Setting(containerEl).setName('View').setHeading();
 		new Setting(containerEl)
-			.setName('Default sort')
+			.setName('Default sort order')
 			.setDesc('Default sort order for bookshelf view')
 			.addDropdown(dropdown => dropdown
 				.addOption('date', 'Date')

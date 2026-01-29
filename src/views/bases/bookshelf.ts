@@ -5,7 +5,6 @@ import { BasesViewBase } from './base';
 import { BookCard } from '../bookCard';
 import { BookFileReader } from '../../services/bookFileService/bookFileReader';
 import { BookFileUpdater } from '../../services/bookFileService/bookFileUpdater';
-import BookshelfPlugin from '../../main';
 
 /**
  * Build factory function for Bookshelf View
