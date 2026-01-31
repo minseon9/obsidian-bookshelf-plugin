@@ -2,6 +2,9 @@ import { TFile } from 'obsidian';
 import { Book } from '../../models/book';
 import { BasesViewBase } from './base';
 import BookshelfPlugin from '../../main';
+import { StatCard } from '../components/StatCard';
+import { SectionHeader } from '../components/SectionHeader';
+import { ChartRenderer } from '../components/ChartRenderer';
 
 /**
  * Book statistics interface
@@ -295,95 +298,84 @@ export class StatisticsBasesView extends BasesViewBase {
 		return stats;
 	}
 
-	private renderContent(): void {
-		if (!this.rootElement || !this.stats) return;
+private renderContent(): void {
+	if (!this.rootElement || !this.stats) return;
 
-		const doc = this.rootElement.ownerDocument;
-		const container = doc.createElement('div');
-		container.style.cssText = 'padding: 20px; overflow-y: auto; height: 100%;';
+	const doc = this.rootElement.ownerDocument;
+	const container = doc.createElement('div');
+	container.setCssProps({
+		padding: "20px",
+		"overflow-y": "auto",
+		height: "100%"
+	});
 
-		// Title
-		const title = doc.createElement('h1');
-		title.textContent = 'Reading statistics';
-		title.style.cssText = 'margin: 0 0 32px 0; font-size: 1.8em;';
-		container.appendChild(title);
+	// Title
+	const title = doc.createElement('h1');
+	title.textContent = 'Reading Statistics';
+	title.setCssProps({
+		margin: "0 0 32px 0",
+		"font-size": "1.8em"
+	});
+	container.appendChild(title);
 
-		// Section 1: Overall Statistics
-		this.renderOverallSection(container, doc);
+	// Section 1: Overall Statistics
+	this.renderOverallSection(container, doc);
 
-		// Section 2: Yearly/Monthly Statistics
-		this.renderTimeBasedSection(container, doc);
+	// Section 2: Yearly/Monthly Statistics
+	this.renderTimeBasedSection(container, doc);
 
-		// Section 3: Category Statistics
-		this.renderCategorySection(container, doc);
+	// Section 3: Category Statistics
+	this.renderCategorySection(container, doc);
 
-		this.rootElement.appendChild(container);
-	}
+	this.rootElement.appendChild(container);
+}
 
-	private renderOverallSection(container: HTMLElement, doc: Document): void {
-		const section = doc.createElement('div');
-		section.style.cssText = 'margin-bottom: 40px;';
+private renderOverallSection(container: HTMLElement, doc: Document): void {
+	const section = doc.createElement('div');
+	section.setCssProps({ "margin-bottom": "40px" });
 
-		// Section header
-		const header = doc.createElement('h2');
-		header.textContent = 'Overall statistics';
-		header.style.cssText = 'margin: 0 0 16px 0; font-size: 1.4em; padding-bottom: 8px; border-bottom: 2px solid var(--background-modifier-border);';
-		section.appendChild(header);
+	// Section header
+	const header = SectionHeader.create(doc, 'Overall Statistics');
+	section.appendChild(header);
 
-		// Grid: 3 cards in a row
-		const cardsGrid = doc.createElement('div');
-		cardsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 16px;';
+	// Grid: 3 cards in a row
+	const cardsGrid = doc.createElement('div');
+	cardsGrid.setCssProps({
+		display: "grid",
+		"grid-template-columns": "repeat(auto-fit, minmax(250px, 1fr))",
+		gap: "16px",
+		"margin-bottom": "16px"
+	});
 
-		const cards = [
-			{ label: 'Total finished books', value: this.stats!.finished, color: 'var(--interactive-success)' },
-			{ label: 'Total pages read', value: this.stats!.readPages.toLocaleString(), color: 'var(--interactive-accent)' },
-			{ label: 'Total reading days', value: this.stats!.totalReadingDays, color: 'var(--text-accent)' },
-		];
+	const cards = [
+		{ label: 'Total Finished Books', value: this.stats!.finished, color: 'var(--interactive-success)' },
+		{ label: 'Total Pages Read', value: this.stats!.readPages.toLocaleString(), color: 'var(--interactive-accent)' },
+		{ label: 'Total Reading Days', value: this.stats!.totalReadingDays, color: 'var(--text-accent)' },
+	];
 
-		cards.forEach(card => {
-			const cardEl = doc.createElement('div');
-			cardEl.style.cssText = 'padding: 20px; border-radius: 8px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border);';
+	cards.forEach(card => {
+		const cardEl = StatCard.create(doc, card.label, card.value, card.color);
+		cardsGrid.appendChild(cardEl);
+	});
 
-			const label = doc.createElement('div');
-			label.textContent = card.label;
-			label.style.cssText = 'font-size: 12px; color: var(--text-muted); margin-bottom: 8px;';
+	section.appendChild(cardsGrid);
 
-			const value = doc.createElement('div');
-			value.textContent = card.value.toString();
-			value.style.cssText = `font-size: 28px; font-weight: 600; color: ${card.color};`;
+	// Average time card (below)
+	const avgValue = this.stats!.averageTimeToFinish > 0 
+		? `${this.stats!.averageTimeToFinish} sessions`
+		: 'No data available';
+	
+	const avgTimeEl = StatCard.createDetailed(
+		doc,
+		'Average Days to Finish',
+		'Average number of reading sessions to complete a book',
+		avgValue,
+		'var(--interactive-accent)'
+	);
+	section.appendChild(avgTimeEl);
 
-			cardEl.appendChild(label);
-			cardEl.appendChild(value);
-			cardsGrid.appendChild(cardEl);
-		});
-
-		section.appendChild(cardsGrid);
-
-		// Average time card (below)
-		const avgTimeEl = doc.createElement('div');
-		avgTimeEl.style.cssText = 'padding: 20px; border-radius: 8px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border);';
-		
-		const avgTitle = doc.createElement('div');
-		avgTitle.textContent = 'Average days to finish';
-		avgTitle.style.cssText = 'font-size: 12px; color: var(--text-muted); margin-bottom: 4px;';
-		
-		const avgDesc = doc.createElement('div');
-		avgDesc.textContent = 'Average number of reading sessions to complete a book';
-		avgDesc.style.cssText = 'font-size: 10px; color: var(--text-faint); margin-bottom: 8px;';
-		
-		const avgValue = doc.createElement('div');
-		avgValue.textContent = this.stats!.averageTimeToFinish > 0 
-			? `${this.stats!.averageTimeToFinish} sessions`
-			: 'No data available';
-		avgValue.style.cssText = 'font-size: 28px; font-weight: 600; color: var(--interactive-accent);';
-		
-		avgTimeEl.appendChild(avgTitle);
-		avgTimeEl.appendChild(avgDesc);
-		avgTimeEl.appendChild(avgValue);
-		section.appendChild(avgTimeEl);
-
-		container.appendChild(section);
-	}
+	container.appendChild(section);
+}
 
 	private renderTimeBasedSection(container: HTMLElement, doc: Document): void {
 		const section = doc.createElement('div');
