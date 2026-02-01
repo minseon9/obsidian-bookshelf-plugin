@@ -110,10 +110,10 @@ export class ChartRenderer {
 			display: "block"
 		});
 
-		// Calculate points
+		// Use fixed coordinate system; viewBox will scale to fit container width
 		const points: Array<{ x: number; y: number; label: string; value: number }> = [];
-		const width = container.clientWidth || 600;
-		const stepX = (width - padding * 2) / Math.max(data.length - 1, 1);
+		const viewWidth = 600;
+		const stepX = (viewWidth - padding * 2) / Math.max(data.length - 1, 1);
 
 		data.forEach((item, index) => {
 			const x = padding + index * stepX;
@@ -122,6 +122,10 @@ export class ChartRenderer {
 				: chartHeight - padding;
 			points.push({ x, y, label: item.label, value: item.value });
 		});
+
+		// Scale to fit: fixed viewBox, SVG fills container
+		svg.setAttribute('viewBox', `0 0 ${viewWidth} ${chartHeight}`);
+		svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
 		// Draw line
 		if (points.length > 1) {
@@ -191,14 +195,15 @@ export class ChartRenderer {
 		});
 
 		const icon = doc.createElement('div');
-		icon.textContent = '??';
+		icon.textContent = '📊';
 		icon.setCssProps({
 			"font-size": "3em",
 			"margin-bottom": "8px"
 		});
 
 		const text = doc.createElement('div');
-		text.textContent = `No ${xAxisLabel.toLowerCase()} data available`;
+		const axisLabel = xAxisLabel.toLowerCase();
+		text.textContent = axisLabel ? `No ${axisLabel} data available` : 'No data available';
 		text.setCssProps({
 			"font-size": "14px"
 		});

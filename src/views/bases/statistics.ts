@@ -5,6 +5,9 @@ import BookshelfPlugin from '../../main';
 import { StatCard } from '../components/StatCard';
 import { SectionHeader } from '../components/SectionHeader';
 import { ChartRenderer } from '../components/ChartRenderer';
+import { ChartPanel } from '../components/ChartPanel';
+import { ToggleButtonGroup } from '../components/ToggleButtonGroup';
+import { DetailsListRow } from '../components/DetailsListRow';
 
 /**
  * Book statistics interface
@@ -149,9 +152,9 @@ export class StatisticsBasesView extends BasesViewBase {
 							}
 						});
 					}
-				} catch (e) {
-					// Ignore errors
-				}
+			} catch {
+				// Ignore errors
+			}
 
 				const bookReadingDays = bookReadingDaysSet.size;
 				stats.yearlyStats[year].readingDays += bookReadingDays;
@@ -185,9 +188,9 @@ export class StatisticsBasesView extends BasesViewBase {
 							}
 						});
 					}
-				} catch (e) {
-					// Ignore errors
-				}
+			} catch {
+				// Ignore errors
+			}
 			}
 		}
 
@@ -287,9 +290,9 @@ export class StatisticsBasesView extends BasesViewBase {
 						totalUpdateDays += updateDays;
 						count++;
 					}
-				} catch (e) {
-					// Ignore errors
-				}
+			} catch {
+				// Ignore errors
+			}
 			}
 			
 			stats.averageTimeToFinish = count > 0 ? Math.round(totalUpdateDays / count) : 0;
@@ -311,7 +314,7 @@ private renderContent(): void {
 
 	// Title
 	const title = doc.createElement('h1');
-	title.textContent = 'Reading Statistics';
+	title.textContent = 'Reading statistics';
 	title.setCssProps({
 		margin: "0 0 32px 0",
 		"font-size": "1.8em"
@@ -379,51 +382,45 @@ private renderOverallSection(container: HTMLElement, doc: Document): void {
 
 	private renderTimeBasedSection(container: HTMLElement, doc: Document): void {
 		const section = doc.createElement('div');
-		section.style.cssText = 'margin-bottom: 40px;';
+		section.setCssProps({ "margin-bottom": "40px" });
 
 		// Section header with toggle
 		const headerContainer = doc.createElement('div');
-		headerContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--background-modifier-border);';
-		
+		headerContainer.setCssProps({
+			display: "flex",
+			"justify-content": "space-between",
+			"align-items": "center",
+			"margin-bottom": "16px",
+			"padding-bottom": "8px",
+			"border-bottom": "2px solid var(--background-modifier-border)"
+		});
+
 		const header = doc.createElement('h2');
 		header.textContent = 'Time-based statistics';
-		header.style.cssText = 'margin: 0; font-size: 1.4em;';
+		header.setCssProps({
+			margin: "0",
+			"font-size": "1.4em"
+		});
 		headerContainer.appendChild(header);
 
-		// Toggle buttons
-		const toggleContainer = doc.createElement('div');
-		toggleContainer.style.cssText = 'display: flex; gap: 4px; background: var(--background-secondary); border-radius: 6px; padding: 4px;';
-
-		const yearButton = doc.createElement('button');
-		yearButton.textContent = 'Yearly';
-		yearButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: var(--interactive-accent); color: var(--text-on-accent); font-size: 13px; font-weight: 600; cursor: pointer;';
-		
-		const monthButton = doc.createElement('button');
-		monthButton.textContent = 'Monthly';
-		monthButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;';
-
-		toggleContainer.appendChild(yearButton);
-		toggleContainer.appendChild(monthButton);
+		const { container: toggleContainer, yearButton, monthButton, setActive } = ToggleButtonGroup.create(doc, 'Yearly', 'Monthly');
 		headerContainer.appendChild(toggleContainer);
 		section.appendChild(headerContainer);
 
 		// Content container
 		const contentContainer = doc.createElement('div');
-		contentContainer.style.cssText = 'position: relative;';
+		contentContainer.setCssProps({ position: "relative" });
 
-		// Render yearly by default
 		this.renderYearlyContent(contentContainer, doc);
 
 		yearButton.addEventListener('click', () => {
-			yearButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: var(--interactive-accent); color: var(--text-on-accent); font-size: 13px; font-weight: 600; cursor: pointer;';
-			monthButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;';
+			setActive('year');
 			contentContainer.empty();
 			this.renderYearlyContent(contentContainer, doc);
 		});
 
 		monthButton.addEventListener('click', () => {
-			monthButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: var(--interactive-accent); color: var(--text-on-accent); font-size: 13px; font-weight: 600; cursor: pointer;';
-			yearButton.style.cssText = 'padding: 6px 16px; border: none; border-radius: 4px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;';
+			setActive('month');
 			contentContainer.empty();
 			this.renderMonthlyContent(contentContainer, doc);
 		});
@@ -434,46 +431,29 @@ private renderOverallSection(container: HTMLElement, doc: Document): void {
 
 	private renderYearlyContent(container: HTMLElement, doc: Document): void {
 		const years = Object.keys(this.stats!.yearlyStats).sort().reverse();
-		
+		const chartsGrid = doc.createElement('div');
+		chartsGrid.setCssProps({
+			display: "grid",
+			"grid-template-columns": "repeat(auto-fit, minmax(300px, 1fr))",
+			gap: "16px",
+			"margin-bottom": "16px"
+		});
+
+		const emptyTitles = ['Finished Books', 'Pages Read', 'Reading Days'];
+
 		if (years.length === 0) {
-			// Show empty charts with axes
-			const chartsGrid = doc.createElement('div');
-			chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;';
-
-			['Finished books', 'Pages read', 'Reading days'].forEach(title => {
-				const chartContainer = doc.createElement('div');
-				chartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
-				const chartTitle = doc.createElement('h3');
-				chartTitle.textContent = title;
-				chartTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-				chartContainer.appendChild(chartTitle);
-				const chart = doc.createElement('div');
-				chart.style.cssText = 'height: 200px; position: relative;';
-				this.renderEmptyChart(chart, doc, 'Year');
-				chartContainer.appendChild(chart);
-				chartsGrid.appendChild(chartContainer);
+			emptyTitles.forEach(title => {
+				const { container: panelContainer, chartEl } = ChartPanel.create(doc, title);
+				ChartRenderer.renderEmptyChart(chartEl, doc, 'Year');
+				chartsGrid.appendChild(panelContainer);
 			});
-
 			container.appendChild(chartsGrid);
 			return;
 		}
 
-		// Grid: 3 charts in a row
-		const chartsGrid = doc.createElement('div');
-		chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 16px;';
-
 		// Finished books chart
-		const booksChartContainer = doc.createElement('div');
-		booksChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
-		
-		const booksTitle = doc.createElement('h3');
-		booksTitle.textContent = 'Finished books';
-		booksTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		booksChartContainer.appendChild(booksTitle);
-
-		const booksChart = doc.createElement('div');
-		booksChart.style.cssText = 'height: 200px; position: relative;';
-		this.renderLineChart(booksChart, doc, years.map(year => {
+		const booksPanel = ChartPanel.create(doc, 'Finished Books');
+		this.renderLineChart(booksPanel.chartEl, doc, years.map(year => {
 			const stat = this.stats!.yearlyStats[year];
 			return {
 				label: year,
@@ -482,380 +462,151 @@ private renderOverallSection(container: HTMLElement, doc: Document): void {
 				changePercent: stat?.changePercent,
 			};
 		}), 'Year');
-		booksChartContainer.appendChild(booksChart);
-		chartsGrid.appendChild(booksChartContainer);
+		chartsGrid.appendChild(booksPanel.container);
 
 		// Pages read chart
-		const pagesChartContainer = doc.createElement('div');
-		pagesChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
-		
-		const pagesTitle = doc.createElement('h3');
-		pagesTitle.textContent = 'Pages read';
-		pagesTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		pagesChartContainer.appendChild(pagesTitle);
-
-		const pagesChart = doc.createElement('div');
-		pagesChart.style.cssText = 'height: 200px; position: relative;';
-		this.renderLineChart(pagesChart, doc, years.map(year => {
+		const pagesPanel = ChartPanel.create(doc, 'Pages Read');
+		this.renderLineChart(pagesPanel.chartEl, doc, years.map(year => {
 			const stat = this.stats!.yearlyStats[year];
-			return {
-				label: year,
-				value: stat ? stat.pages : 0,
-			};
+			return { label: year, value: stat ? stat.pages : 0 };
 		}), 'Year');
-		pagesChartContainer.appendChild(pagesChart);
-		chartsGrid.appendChild(pagesChartContainer);
+		chartsGrid.appendChild(pagesPanel.container);
 
 		// Reading days chart
-		const daysChartContainer = doc.createElement('div');
-		daysChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
-		
-		const daysTitle = doc.createElement('h3');
-		daysTitle.textContent = 'Reading days';
-		daysTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		daysChartContainer.appendChild(daysTitle);
-
-		const daysChart = doc.createElement('div');
-		daysChart.style.cssText = 'height: 200px; position: relative;';
-		this.renderLineChart(daysChart, doc, years.map(year => {
+		const daysPanel = ChartPanel.create(doc, 'Reading Days');
+		this.renderLineChart(daysPanel.chartEl, doc, years.map(year => {
 			const stat = this.stats!.yearlyStats[year];
-			return {
-				label: year,
-				value: stat ? stat.readingDays : 0,
-			};
+			return { label: year, value: stat ? stat.readingDays : 0 };
 		}), 'Year');
-		daysChartContainer.appendChild(daysChart);
-		chartsGrid.appendChild(daysChartContainer);
+		chartsGrid.appendChild(daysPanel.container);
 
 		container.appendChild(chartsGrid);
 
 		// Details list
-		const list = doc.createElement('div');
-		list.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
-		
-		const listTitle = doc.createElement('h3');
-		listTitle.textContent = 'Details';
-		listTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		list.appendChild(listTitle);
-
+		const { container: listContainer, listEl } = ChartPanel.createDetailsPanel(doc, 'Details');
 		years.forEach(year => {
 			const stat = this.stats!.yearlyStats[year];
 			if (!stat) return;
-			
-			const item = doc.createElement('div');
-			item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--background-modifier-border);';
-
-			const leftContainer = doc.createElement('div');
-			leftContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
-
-			const label = doc.createElement('span');
-			label.textContent = year;
-			label.style.cssText = 'font-size: 14px; font-weight: 600;';
-			leftContainer.appendChild(label);
-
-			if (stat.change !== undefined && stat.changePercent !== undefined) {
-				const changeEl = doc.createElement('span');
-				const isPositive = stat.change >= 0;
-				const changeText = isPositive ? `+${stat.change}` : `${stat.change}`;
-				const percentText = isPositive ? `+${stat.changePercent}%` : `${stat.changePercent}%`;
-				changeEl.textContent = `${changeText} (${percentText})`;
-				changeEl.style.cssText = `font-size: 11px; color: ${isPositive ? 'var(--interactive-success)' : 'var(--text-error)'};`;
-				leftContainer.appendChild(changeEl);
-			}
-
-			const rightContainer = doc.createElement('div');
-			rightContainer.style.cssText = 'display: flex; flex-direction: column; gap: 2px; align-items: flex-end;';
-
-			const booksPages = doc.createElement('span');
-			booksPages.textContent = `${stat.count} books, ${stat.pages.toLocaleString()} pages`;
-			booksPages.style.cssText = 'font-size: 14px; color: var(--text-muted);';
-
-			const readingDaysSpan = doc.createElement('span');
-			readingDaysSpan.textContent = `${stat.readingDays} reading days, Avg: ${stat.averageTimeToFinish} sessions`;
-			readingDaysSpan.style.cssText = 'font-size: 11px; color: var(--text-faint);';
-
-			rightContainer.appendChild(booksPages);
-			rightContainer.appendChild(readingDaysSpan);
-
-			item.appendChild(leftContainer);
-			item.appendChild(rightContainer);
-			list.appendChild(item);
+			const changeText = stat.change !== undefined && stat.changePercent !== undefined
+				? `${stat.change >= 0 ? '+' : ''}${stat.change} (${stat.changePercent !== undefined ? (stat.change >= 0 ? '+' : '') + stat.changePercent + '%' : ''})`
+				: undefined;
+			const changeColor = stat.change !== undefined && stat.change >= 0 ? 'var(--interactive-success)' : 'var(--text-error)';
+			const row = DetailsListRow.create(doc, {
+				label: year,
+				changeText,
+				changeColor,
+				rightPrimary: `${stat.count} books, ${stat.pages.toLocaleString()} pages`,
+				rightSecondary: `${stat.readingDays} reading days, Avg: ${stat.averageTimeToFinish} sessions`
+			});
+			listEl.appendChild(row);
 		});
+		container.appendChild(listContainer);
+	}
 
-		container.appendChild(list);
+	private monthLabel(monthKey: string): string {
+		const parts = monthKey.split('-');
+		const year = parts[0] || '';
+		const monthNum = parts[1] || '1';
+		const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+		return `${monthNames[parseInt(monthNum, 10) - 1] || 'Jan'} ${year}`;
 	}
 
 	private renderMonthlyContent(container: HTMLElement, doc: Document): void {
 		const months = Object.keys(this.stats!.monthlyStats).sort().reverse().slice(0, 12);
-		
+		const chartsGrid = doc.createElement('div');
+		chartsGrid.setCssProps({
+			display: "grid",
+			"grid-template-columns": "repeat(auto-fit, minmax(300px, 1fr))",
+			gap: "16px",
+			"margin-bottom": "16px"
+		});
+
+		const emptyTitles = ['Finished Books (Last 12)', 'Pages Read (Last 12)', 'Reading Days (Last 12)'];
+
 		if (months.length === 0) {
-			// Show empty charts with axes
-			const chartsGrid = doc.createElement('div');
-			chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;';
-
-			['Finished books (Last 12)', 'Pages read (Last 12)', 'Reading days (Last 12)'].forEach(title => {
-				const chartContainer = doc.createElement('div');
-				chartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
-				const chartTitle = doc.createElement('h3');
-				chartTitle.textContent = title;
-				chartTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-				chartContainer.appendChild(chartTitle);
-				const chart = doc.createElement('div');
-				chart.style.cssText = 'height: 200px; position: relative;';
-				this.renderEmptyChart(chart, doc, 'Month');
-				chartContainer.appendChild(chart);
-				chartsGrid.appendChild(chartContainer);
+			emptyTitles.forEach(title => {
+				const { container: panelContainer, chartEl } = ChartPanel.create(doc, title);
+				ChartRenderer.renderEmptyChart(chartEl, doc, 'Month');
+				chartsGrid.appendChild(panelContainer);
 			});
-
 			container.appendChild(chartsGrid);
 			return;
 		}
 
-		// Grid: 3 charts in a row
-		const chartsGrid = doc.createElement('div');
-		chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 16px;';
-
-		// Finished books chart
-		const booksChartContainer = doc.createElement('div');
-		booksChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
-		
-		const booksTitle = doc.createElement('h3');
-		booksTitle.textContent = 'Finished books (Last 12)';
-		booksTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		booksChartContainer.appendChild(booksTitle);
-
-		const booksChart = doc.createElement('div');
-		booksChart.style.cssText = 'height: 200px; position: relative;';
-		this.renderLineChart(booksChart, doc, months.map(month => {
+		const booksPanel = ChartPanel.create(doc, 'Finished Books (Last 12)');
+		this.renderLineChart(booksPanel.chartEl, doc, months.map(month => {
 			const stat = this.stats!.monthlyStats[month];
-			const parts = month.split('-');
-			const year = parts[0] || '';
-			const monthNum = parts[1] || '1';
-			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
 			return {
-				label: monthLabel,
+				label: this.monthLabel(month),
 				value: stat ? stat.count : 0,
 				change: stat?.change,
 				changePercent: stat?.changePercent,
 			};
 		}), 'Month');
-		booksChartContainer.appendChild(booksChart);
-		chartsGrid.appendChild(booksChartContainer);
+		chartsGrid.appendChild(booksPanel.container);
 
-		// Pages read chart
-		const pagesChartContainer = doc.createElement('div');
-		pagesChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
-		
-		const pagesTitle = doc.createElement('h3');
-		pagesTitle.textContent = 'Pages read (Last 12)';
-		pagesTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		pagesChartContainer.appendChild(pagesTitle);
-
-		const pagesChart = doc.createElement('div');
-		pagesChart.style.cssText = 'height: 200px; position: relative;';
-		this.renderLineChart(pagesChart, doc, months.map(month => {
+		const pagesPanel = ChartPanel.create(doc, 'Pages Read (Last 12)');
+		this.renderLineChart(pagesPanel.chartEl, doc, months.map(month => {
 			const stat = this.stats!.monthlyStats[month];
-			const parts = month.split('-');
-			const year = parts[0] || '';
-			const monthNum = parts[1] || '1';
-			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
-			return {
-				label: monthLabel,
-				value: stat ? stat.pages : 0,
-			};
+			return { label: this.monthLabel(month), value: stat ? stat.pages : 0 };
 		}), 'Month');
-		pagesChartContainer.appendChild(pagesChart);
-		chartsGrid.appendChild(pagesChartContainer);
+		chartsGrid.appendChild(pagesPanel.container);
 
-		// Reading days chart
-		const daysChartContainer = doc.createElement('div');
-		daysChartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
-		
-		const daysTitle = doc.createElement('h3');
-		daysTitle.textContent = 'Reading days (Last 12)';
-		daysTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		daysChartContainer.appendChild(daysTitle);
-
-		const daysChart = doc.createElement('div');
-		daysChart.style.cssText = 'height: 200px; position: relative;';
-		this.renderLineChart(daysChart, doc, months.map(month => {
+		const daysPanel = ChartPanel.create(doc, 'Reading Days (Last 12)');
+		this.renderLineChart(daysPanel.chartEl, doc, months.map(month => {
 			const stat = this.stats!.monthlyStats[month];
-			const parts = month.split('-');
-			const year = parts[0] || '';
-			const monthNum = parts[1] || '1';
-			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
-			return {
-				label: monthLabel,
-				value: stat ? stat.readingDays : 0,
-			};
+			return { label: this.monthLabel(month), value: stat ? stat.readingDays : 0 };
 		}), 'Month');
-		daysChartContainer.appendChild(daysChart);
-		chartsGrid.appendChild(daysChartContainer);
+		chartsGrid.appendChild(daysPanel.container);
 
 		container.appendChild(chartsGrid);
 
-		// Details list
-		const list = doc.createElement('div');
-		list.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border);';
-		
-		const listTitle = doc.createElement('h3');
-		listTitle.textContent = 'Details';
-		listTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		list.appendChild(listTitle);
-
+		const { container: listContainer, listEl } = ChartPanel.createDetailsPanel(doc, 'Details');
 		months.forEach(month => {
 			const stat = this.stats!.monthlyStats[month];
 			if (!stat) return;
-			
-			const parts = month.split('-');
-			const year = parts[0] || '';
-			const monthNum = parts[1] || '1';
-			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-			const monthLabel = `${monthNames[parseInt(monthNum) - 1] || 'Jan'} ${year}`;
-			
-			const item = doc.createElement('div');
-			item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--background-modifier-border);';
-
-			const leftContainer = doc.createElement('div');
-			leftContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
-
-			const label = doc.createElement('span');
-			label.textContent = monthLabel;
-			label.style.cssText = 'font-size: 14px; font-weight: 600;';
-			leftContainer.appendChild(label);
-
-			if (stat.change !== undefined && stat.changePercent !== undefined) {
-				const changeEl = doc.createElement('span');
-				const isPositive = stat.change >= 0;
-				const changeText = isPositive ? `+${stat.change}` : `${stat.change}`;
-				const percentText = isPositive ? `+${stat.changePercent}%` : `${stat.changePercent}%`;
-				changeEl.textContent = `${changeText} (${percentText})`;
-				changeEl.style.cssText = `font-size: 11px; color: ${isPositive ? 'var(--interactive-success)' : 'var(--text-error)'};`;
-				leftContainer.appendChild(changeEl);
-			}
-
-			const rightContainer = doc.createElement('div');
-			rightContainer.style.cssText = 'display: flex; flex-direction: column; gap: 2px; align-items: flex-end;';
-
-			const booksPages = doc.createElement('span');
-			booksPages.textContent = `${stat.count} books, ${stat.pages.toLocaleString()} pages`;
-			booksPages.style.cssText = 'font-size: 14px; color: var(--text-muted);';
-
-			const readingDaysSpan = doc.createElement('span');
-			readingDaysSpan.textContent = `${stat.readingDays} reading days, Avg: ${stat.averageTimeToFinish} sessions`;
-			readingDaysSpan.style.cssText = 'font-size: 11px; color: var(--text-faint);';
-
-			rightContainer.appendChild(booksPages);
-			rightContainer.appendChild(readingDaysSpan);
-
-			item.appendChild(leftContainer);
-			item.appendChild(rightContainer);
-			list.appendChild(item);
+			const monthLabelStr = this.monthLabel(month);
+			const changeText = stat.change !== undefined && stat.changePercent !== undefined
+				? `${stat.change >= 0 ? '+' : ''}${stat.change} (${stat.changePercent !== undefined ? (stat.change >= 0 ? '+' : '') + stat.changePercent + '%' : ''})`
+				: undefined;
+			const changeColor = stat.change !== undefined && stat.change >= 0 ? 'var(--interactive-success)' : 'var(--text-error)';
+			const row = DetailsListRow.create(doc, {
+				label: monthLabelStr,
+				changeText,
+				changeColor,
+				rightPrimary: `${stat.count} books, ${stat.pages.toLocaleString()} pages`,
+				rightSecondary: `${stat.readingDays} reading days, Avg: ${stat.averageTimeToFinish} sessions`
+			});
+			listEl.appendChild(row);
 		});
-
-		container.appendChild(list);
+		container.appendChild(listContainer);
 	}
 
 	private renderCategorySection(container: HTMLElement, doc: Document): void {
 		const section = doc.createElement('div');
-		section.style.cssText = 'margin-bottom: 40px;';
+		section.setCssProps({ "margin-bottom": "40px" });
 
-		// Section header
-		const header = doc.createElement('h2');
-		header.textContent = 'Category statistics';
-		header.style.cssText = 'margin: 0 0 16px 0; font-size: 1.4em; padding-bottom: 8px; border-bottom: 2px solid var(--background-modifier-border);';
+		const header = SectionHeader.create(doc, 'Category Statistics');
 		section.appendChild(header);
 
 		const categories = Object.entries(this.stats!.categoryCounts)
 			.sort((a, b) => b[1] - a[1])
 			.slice(0, 10);
 
-		// Always show chart container with wider width to fit 10 bars comfortably
-		const chartContainer = doc.createElement('div');
-		chartContainer.style.cssText = 'padding: 16px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border); max-width: 600px;';
-		
-		const chartTitle = doc.createElement('h3');
-		chartTitle.textContent = 'Books by category (Top 10)';
-		chartTitle.style.cssText = 'margin: 0 0 12px 0; font-size: 0.9em; color: var(--text-muted);';
-		chartContainer.appendChild(chartTitle);
+		const chartPanel = ChartPanel.create(doc, 'Books by Category (Top 10)');
+		chartPanel.container.setCssProps({ "max-width": "600px" });
 
-		const barChart = doc.createElement('div');
-		barChart.style.cssText = 'height: 200px; position: relative;';
-		
 		if (categories.length === 0) {
-			this.renderEmptyChart(barChart, doc, 'Category');
+			ChartRenderer.renderEmptyChart(chartPanel.chartEl, doc, 'Category');
 		} else {
-			this.renderBarChart(barChart, doc, categories.map(([category, count]) => ({
+			ChartRenderer.renderBarChart(chartPanel.chartEl, doc, categories.map(([category, count]) => ({
 				label: category,
 				value: count,
 			})));
 		}
-		
-		chartContainer.appendChild(barChart);
-		section.appendChild(chartContainer);
+
+		section.appendChild(chartPanel.container);
 		container.appendChild(section);
-	}
-
-
-	/**
-	 * Render a simple bar chart
-	 */
-	private renderBarChart(container: HTMLElement, doc: Document, data: Array<{ label: string; value: number }>): void {
-		if (data.length === 0) return;
-
-		const maxValue = Math.max(...data.map(d => d.value), 1);
-		const chartHeight = 180;
-		// Fixed bar width for consistent appearance, with spacing
-		const barWidth = 40;
-		const barSpacing = 12;
-
-		const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-		svg.setAttribute('width', '100%');
-		svg.setAttribute('height', `${chartHeight}px`);
-		svg.style.cssText = 'display: block;';
-
-		data.forEach((item, index) => {
-			const barHeight = (item.value / maxValue) * (chartHeight - 40);
-			const x = index * (barWidth + barSpacing) + 10;
-			const y = chartHeight - barHeight - 20;
-
-			// Bar
-			const rect = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
-			rect.setAttribute('x', x.toString());
-			rect.setAttribute('y', y.toString());
-			rect.setAttribute('width', barWidth.toString());
-			rect.setAttribute('height', barHeight.toString());
-			rect.setAttribute('fill', 'var(--interactive-accent)');
-			rect.setAttribute('rx', '4');
-			svg.appendChild(rect);
-
-			// Value label on top of bar
-			if (item.value > 0) {
-				const text = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
-				text.setAttribute('x', (x + barWidth / 2).toString());
-				text.setAttribute('y', (y - 5).toString());
-				text.setAttribute('text-anchor', 'middle');
-				text.setAttribute('font-size', '12');
-				text.setAttribute('fill', 'var(--text-normal)');
-				text.textContent = item.value.toString();
-				svg.appendChild(text);
-			}
-
-			// X-axis label
-			const label = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
-			label.setAttribute('x', (x + barWidth / 2).toString());
-			label.setAttribute('y', (chartHeight - 5).toString());
-			label.setAttribute('text-anchor', 'middle');
-			label.setAttribute('font-size', '10');
-			label.setAttribute('fill', 'var(--text-muted)');
-			label.textContent = item.label.length > 7 ? item.label.substring(0, 7) + '...' : item.label;
-			svg.appendChild(label);
-		});
-
-		container.appendChild(svg);
 	}
 
 	/**
@@ -873,15 +624,17 @@ private renderOverallSection(container: HTMLElement, doc: Document): void {
 		const reversedData = [...data].reverse();
 		const maxValue = Math.max(...reversedData.map(d => d.value), 1);
 		const chartHeight = 200;
-		const chartWidth = container.clientWidth || 600;
+		const viewWidth = 600;
 		const padding = 40;
-		const plotWidth = chartWidth - padding * 2;
+		const plotWidth = viewWidth - padding * 2;
 		const plotHeight = chartHeight - padding * 2;
 
 		const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
 		svg.setAttribute('width', '100%');
 		svg.setAttribute('height', `${chartHeight}px`);
-		svg.style.cssText = 'display: block;';
+		svg.setAttribute('viewBox', `0 0 ${viewWidth} ${chartHeight}`);
+		svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+		(svg as unknown as HTMLElement).setCssProps({ display: "block" });
 
 		// Calculate points for line
 		const points: string[] = [];
@@ -992,15 +745,17 @@ private renderOverallSection(container: HTMLElement, doc: Document): void {
 	 */
 	private renderEmptyChart(container: HTMLElement, doc: Document, xAxisLabel: string): void {
 		const chartHeight = 200;
-		const chartWidth = container.clientWidth || 600;
+		const viewWidth = 600;
 		const padding = 40;
-		const plotWidth = chartWidth - padding * 2;
+		const plotWidth = viewWidth - padding * 2;
 		const plotHeight = chartHeight - padding * 2;
 
 		const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
 		svg.setAttribute('width', '100%');
 		svg.setAttribute('height', `${chartHeight}px`);
-		svg.style.cssText = 'display: block;';
+		svg.setAttribute('viewBox', `0 0 ${viewWidth} ${chartHeight}`);
+		svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+		(svg as unknown as HTMLElement).setCssProps({ display: "block" });
 
 		// Y-axis (value scale)
 		const yAxisSteps = 5;
