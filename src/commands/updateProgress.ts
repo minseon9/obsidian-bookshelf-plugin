@@ -15,7 +15,7 @@ export function registerUpdateProgressCommand(app: App, plugin: BookshelfPlugin)
 				// Show notice if no file is open
 				// For now, just open the modal (it will show an error)
 			}
-			const modal = new ProgressUpdateModal(app, plugin, activeFile);
+			const modal = new ProgressUpdateModal(app, plugin, activeFile ?? undefined);
 			modal.open();
 		},
 	});

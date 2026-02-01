@@ -1,6 +1,8 @@
-import {App, Modal, Setting} from 'obsidian';
-import {Book} from '../models/book';
-import {ReadingRecord} from '../models/readingRecord';
+import { App, Modal, Setting, TFile } from 'obsidian';
+import { Book } from '../models/book';
+import { BookStatus } from '../models/bookStatus';
+import { ReadingRecord } from '../models/readingRecord';
+import type { ReadingHistorySummaryItem } from '../services/frontmatterService/types';
 import {getLastEndPage} from '../models/readingRecordFactory';
 import {BookFileReader} from '../services/bookFileService/bookFileReader';
 import {BookFileUpdater} from '../services/bookFileService/bookFileUpdater';
@@ -14,29 +16,29 @@ export class ProgressUpdateModal extends Modal {
 	private bookFileReader: BookFileReader;
 	private bookFileUpdater: BookFileUpdater;
 	private book: Book | null = null;
-	private file: any; // TFile
+	private file: TFile | null;
 	private startPageInput: HTMLInputElement;
 	private endPageInput: HTMLInputElement;
 	private pagesReadDisplay: HTMLElement;
 	private progressDisplay: HTMLElement;
 	private notesInput: HTMLTextAreaElement;
 
-	constructor(app: App, plugin: BookshelfPlugin, file?: any) {
+	constructor(app: App, plugin: BookshelfPlugin, file?: TFile) {
 		super(app);
 		this.plugin = plugin;
 		this.bookFileReader = new BookFileReader(app);
 		this.bookFileUpdater = new BookFileUpdater(app);
-		this.file = file || this.app.workspace.getActiveFile();
+		this.file = file ?? this.app.workspace.getActiveFile();
 	}
 
 	onOpen() {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl('h2', { text: 'Update Reading Progress' });
+		contentEl.createEl('h2', { text: 'Update reading progress' });
 
 		// Load book data
-		this.loadBookData().then(() => {
+		void this.loadBookData().then(() => {
 			if (!this.book) {
 				contentEl.createEl('div', {
 					cls: 'bookshelf-error',
@@ -76,7 +78,7 @@ export class ProgressUpdateModal extends Modal {
 					totalPages: bookData.totalPages,
 					coverUrl: bookData.coverUrl,
 					category: bookData.category || [],
-					status: (bookData.status as any) || 'unread',
+					status: (bookData.status as BookStatus) || 'unread',
 					readPage: bookData.readPage || 0,
 					readStarted: bookData.readStarted,
 					readFinished: bookData.readFinished,
@@ -111,12 +113,13 @@ export class ProgressUpdateModal extends Modal {
 		}
 
 		// Get previous reading history from frontmatter summary (faster)
-		this.app.vault.read(this.file).then(async content => {
-					const { FrontmatterParser } = await import('../services/frontmatterService/frontmatterParser');
+		if (!this.file) return;
+		void this.app.vault.read(this.file).then(async content => {
+			const { FrontmatterParser } = await import('../services/frontmatterService/frontmatterParser');
 			const { frontmatter } = FrontmatterParser.extract(content);
 			// Use reading_history_summary from frontmatter for statistics
 			const historySummary = frontmatter.reading_history_summary || [];
-			const history: ReadingRecord[] = historySummary.map((item: any) => ({
+			const history: ReadingRecord[] = historySummary.map((item: ReadingHistorySummaryItem) => ({
 				date: item.date || '',
 				startPage: item.startPage || 0,
 				endPage: item.endPage || 0,
@@ -211,10 +214,10 @@ export class ProgressUpdateModal extends Modal {
 
 			const updateButton = buttonContainer.createEl('button', {
 				cls: 'mod-cta',
-				text: 'Update Progress',
+				text: 'Update progress',
 			});
 			updateButton.addEventListener('click', () => {
-				this.updateProgress();
+				void this.updateProgress();
 			});
 		});
 	}
@@ -239,14 +242,14 @@ export class ProgressUpdateModal extends Modal {
 	 * Update progress
 	 */
 	private async updateProgress(): Promise<void> {
-		if (!this.file || !this.book) {
+		const file = this.file;
+		if (!file || !this.book) {
 			return;
 		}
 
 		const startPage = parseInt(this.startPageInput.value, 10) || 0;
 		const endPage = parseInt(this.endPageInput.value, 10) || 0;
-		const pagesRead = Math.max(0, endPage - startPage);
-		let notes = this.notesInput.value.trim() || undefined;
+		const notes = this.notesInput.value.trim() || undefined;
 
 		// Check if notes are required
 		if (this.plugin.settings.requireReadingNotes && !notes) {
@@ -261,7 +264,7 @@ export class ProgressUpdateModal extends Modal {
 
 		try {
 			await this.bookFileUpdater.updateReadingProgress(
-				this.file, 
+				file,
 				endPage,
 				startPage,
 				notes,
@@ -297,7 +300,7 @@ export class ProgressUpdateModal extends Modal {
 		"font-weight": "500"
 	});
 
-	const text = messageContainer.createEl('span', {
+	messageContainer.createEl('span', {
 		text: message,
 	});
 
@@ -319,12 +322,12 @@ export class ProgressUpdateModal extends Modal {
 			cls: 'bookshelf-message bookshelf-message-error',
 		});
 
-		const iconEl = messageContainer.createEl('div', {
+		messageContainer.createEl('div', {
 			cls: 'bookshelf-message-icon',
 			text: '!',
 		});
 
-		const textEl = messageContainer.createEl('div', {
+		messageContainer.createEl('div', {
 			cls: 'bookshelf-message-text',
 			text: message,
 		});

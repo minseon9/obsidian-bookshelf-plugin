@@ -261,7 +261,7 @@ export abstract class BasesViewBase extends Component {
 		};
 		
 		// Add to inner button with capture phase
-		innerBtn.addEventListener("click", handleClick, { capture: true, once: false });
+		innerBtn.addEventListener("click", (e) => { void handleClick(e); }, { capture: true, once: false });
 		
 		// Also add mousedown as backup
 		innerBtn.addEventListener("mousedown", (e) => {
@@ -525,7 +525,7 @@ export abstract class BasesViewBase extends Component {
 	 * Lifecycle: Refresh/re-render the view.
 	 */
 	refresh(): void {
-		this.render();
+		void this.render();
 	}
 
 	/**

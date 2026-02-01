@@ -37,7 +37,8 @@ export class SearchModal extends Modal {
 
 		// Search input
 		new Setting(contentEl)
-		.setName('Search Query')
+		.setName('Search query')
+		// eslint-disable-next-line obsidianmd/ui/sentence-case
 		.setDesc('Enter book title, author or ISBN')
 			.addText(text => {
 				this.searchInput = text.inputEl;
@@ -131,7 +132,7 @@ export class SearchModal extends Modal {
 			this.renderResults(this.currentResults);
 			this.hideLoading();
 			this.isLoadingMore = false;
-		} catch (error) {
+		} catch {
 			this.hideLoading();
 			this.showError('Failed to search books. Please try again later.');
 			if (offset === 0) {

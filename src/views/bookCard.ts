@@ -113,8 +113,8 @@ export class BookCard {
 			});
 		}
 
-		// Get last read date from book data
-		const lastReadDate = (this.book as any).lastReadDate;
+		// Get last read date from book data (optional extended field)
+		const lastReadDate = (this.book as Book & { lastReadDate?: string }).lastReadDate;
 
 		// Reading status and dates section (always show for reading books)
 		const statusSection = infoContainer.createEl('div', {
@@ -192,7 +192,7 @@ export class BookCard {
 				color: "var(--text-faint)",
 				"font-size": "11px"
 			});
-			const lastReadValue = lastReadRow.createEl('span', { text: lastReadDate });
+			const lastReadValue = lastReadRow.createEl('span', { text: lastReadDate ?? '' });
 			lastReadValue.setCssProps({
 				"font-weight": "700",
 				color: "var(--interactive-accent)",
@@ -327,7 +327,7 @@ export class BookCard {
 
 			const updateButton = buttonContainer.createEl('button', {
 				cls: 'mod-cta',
-				text: 'Update Progress',
+				text: 'Update progress',
 			});
 			updateButton.setCssProps({
 				width: "100%",
@@ -350,9 +350,9 @@ export class BookCard {
 				if ((e.target as HTMLElement).closest('button')) {
 					return;
 				}
-				this.app.workspace.openLinkText(this.file!.path, '', false);
+				void this.app.workspace.openLinkText(this.file!.path, '', false);
 			});
-			card.style.cursor = 'pointer';
+			card.setCssProps({ cursor: "pointer" });
 		}
 
 		return card;
@@ -385,7 +385,7 @@ export class BookCard {
 		}
 
 		// Status badge
-		const statusBadge = spineContainer.createEl('div', {
+		spineContainer.createEl('div', {
 			cls: 'bookshelf-status-badge',
 			text: this.book.status === 'finished' ? 'Finished' : 'Unread',
 		});
@@ -401,9 +401,9 @@ export class BookCard {
 		// Click handler
 		if (this.file) {
 			card.addEventListener('click', () => {
-				this.app.workspace.openLinkText(this.file!.path, '', false);
+				void this.app.workspace.openLinkText(this.file!.path, '', false);
 			});
-			card.style.cursor = 'pointer';
+			card.setCssProps({ cursor: "pointer" });
 		}
 
 		return card;

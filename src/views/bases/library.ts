@@ -12,7 +12,7 @@ export class LibraryBasesView extends BasesViewBase {
 	private unreadBooks: Array<{ book: Book; file: TFile }> = [];
 	private finishedBooks: Array<{ book: Book; file: TFile }> = [];
 
-	constructor(controller: any, containerEl: HTMLElement, plugin: BookshelfPlugin) {
+	constructor(controller: unknown, containerEl: HTMLElement, plugin: BookshelfPlugin) {
 		super(controller, containerEl, plugin);
 	}
 
@@ -95,7 +95,7 @@ export class LibraryBasesView extends BasesViewBase {
 		});
 		
 		const titleEl = doc.createElement('h3');
-		titleEl.textContent = 'Unread Books (0)';
+		titleEl.textContent = 'Unread books (0)';
 		titleEl.setCssProps({
 			margin: "0",
 			"font-size": "1.2em",
@@ -126,7 +126,7 @@ export class LibraryBasesView extends BasesViewBase {
 		});
 		
 		const titleEl = doc.createElement('h3');
-		titleEl.textContent = 'Finished Books (0)';
+		titleEl.textContent = 'Finished books (0)';
 		titleEl.setCssProps({
 			margin: "0",
 			"font-size": "1.2em",
@@ -189,7 +189,7 @@ export class LibraryBasesView extends BasesViewBase {
 			if (e.defaultPrevented) return;
 			const app = this.app || this.plugin.app;
 			if (app) {
-				app.workspace.openLinkText(file.path, '', true);
+				void app.workspace.openLinkText(file.path, '', true);
 			}
 		});
 

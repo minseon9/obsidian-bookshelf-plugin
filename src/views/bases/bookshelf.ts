@@ -188,8 +188,8 @@ export class BookshelfBasesView extends BasesViewBase {
 			try {
 				const bookData = e.dataTransfer?.getData('application/bookshelf-book');
 				if (bookData && bookData.trim()) {
-					const parsed = JSON.parse(bookData);
-					filePath = parsed.path;
+					const parsed = JSON.parse(bookData) as { path?: string };
+					filePath = parsed.path ?? null;
 				}
 			} catch {
 				// Ignore parse errors
@@ -367,7 +367,7 @@ hint.textContent = 'Or click "new book" to add a new book';
 		}
 	});
 
-		dropZone.addEventListener('drop', async (e) => {
+		const handleDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		dropZone.classList.remove('drag-over');
@@ -376,15 +376,14 @@ hint.textContent = 'Or click "new book" to add a new book';
 			"background-color": ""
 		});
 
-
 			try {
 				let filePath: string | null = null;
 				
 				const bookData = e.dataTransfer?.getData('application/bookshelf-book');
 			if (bookData) {
 				try {
-					const parsed = JSON.parse(bookData);
-					filePath = parsed.path;
+					const parsed = JSON.parse(bookData) as { path?: string };
+					filePath = parsed.path ?? null;
 				} catch {
 					// Ignore parse errors
 				}
@@ -405,7 +404,8 @@ hint.textContent = 'Or click "new book" to add a new book';
 			} catch (error) {
 				console.error('[Bookshelf] Error handling drop:', error);
 			}
-		});
+		};
+		dropZone.addEventListener('drop', (e) => { void handleDrop(e); });
 
 		container.appendChild(dropZone);
 	}
@@ -432,7 +432,7 @@ hint.textContent = 'Or click "new book" to add a new book';
 	});
 	
 	const titleEl = doc.createElement('h3');
-	titleEl.textContent = 'To Read (0)';
+	titleEl.textContent = 'To read (0)';
 	titleEl.setCssProps({
 		margin: "0",
 		"font-size": "1.1em",
@@ -548,7 +548,7 @@ hint.textContent = 'Or click "new book" to add a new book';
 				if (e.defaultPrevented) return;
 				const app = this.app || this.plugin.app;
 				if (app) {
-					app.workspace.openLinkText(file.path, '', true);
+					void app.workspace.openLinkText(file.path, '', true);
 				}
 			});
 
@@ -630,7 +630,7 @@ hint.textContent = 'Or click "new book" to add a new book';
 			cursor: "grab",
 			"user-select": "none"
 		});
-		dragIcon.title = 'Drag to Reading section to start reading';
+		dragIcon.title = 'Drag to reading section to start reading';
 			// Make drag icon also draggable
 			dragIcon.addEventListener('mousedown', (e) => {
 				e.stopPropagation();
@@ -655,11 +655,12 @@ hint.textContent = 'Or click "new book" to add a new book';
 		switch (sortType) {
 			case 'title':
 				return a.title.localeCompare(b.title);
-			case 'author':
+			case 'author': {
 				const authorA = a.author[0] || '';
 				const authorB = b.author[0] || '';
 				return authorA.localeCompare(authorB);
-			case 'progress':
+			}
+			case 'progress': {
 				const progressA = a.totalPages && a.readPage
 					? a.readPage / a.totalPages
 					: 0;
@@ -667,6 +668,7 @@ hint.textContent = 'Or click "new book" to add a new book';
 					? b.readPage / b.totalPages
 					: 0;
 				return progressB - progressA;
+			}
 			case 'date':
 			default:
 				return new Date(b.created).getTime() - new Date(a.created).getTime();
@@ -709,8 +711,8 @@ private renderEmptyState(container: HTMLElement): void {
 
 		const addButton = doc.createElement('button');
 		addButton.className = 'mod-cta';
-		addButton.textContent = 'Search and Add Book';
-		addButton.addEventListener('click', async (e) => {
+		addButton.textContent = 'Search and add book';
+		const handleAddClick = async (e: Event) => {
 			e.stopPropagation();
 			e.preventDefault();
 			const app = this.app || this.plugin.app;
@@ -725,7 +727,8 @@ private renderEmptyState(container: HTMLElement): void {
 			} catch (error) {
 				console.error("[Bookshelf] Error opening search modal:", error);
 			}
-		});
+		};
+		addButton.addEventListener('click', (e) => { void handleAddClick(e); });
 		emptyState.appendChild(addButton);
 
 		container.appendChild(emptyState);
