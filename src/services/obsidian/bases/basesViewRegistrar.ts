@@ -21,7 +21,7 @@ export async function registerBasesBookshelfView(plugin: BookshelfPlugin): Promi
 		try {
 			// Register Bookshelf View (all books)
 			const bookshelfSuccess = registerBasesView(plugin, "bookshelfView", {
-				name: "Bookshelf View",
+				name: "Bookshelf view",
 				icon: "book-open",
 				factory: (controller: unknown, containerEl: HTMLElement) => {
 					return new BookshelfBasesView(controller, containerEl, plugin);
@@ -30,7 +30,7 @@ export async function registerBasesBookshelfView(plugin: BookshelfPlugin): Promi
 
 			// Register Reading View
 			const readingSuccess = registerBasesView(plugin, "bookshelfReadingView", {
-				name: "Reading Books",
+				name: "Reading books",
 				icon: "book-open-text",
 				factory: (controller: unknown, containerEl: HTMLElement) => {
 					return new ReadingBasesView(controller, containerEl, plugin);
@@ -48,7 +48,7 @@ export async function registerBasesBookshelfView(plugin: BookshelfPlugin): Promi
 
 			// Register Statistics View
 			const statisticsSuccess = registerBasesView(plugin, "bookshelfStatisticsView", {
-				name: "Reading Statistics",
+				name: "Reading statistics",
 				icon: "bar-chart",
 				factory: (controller: unknown, containerEl: HTMLElement) => {
 					return new StatisticsBasesView(controller, containerEl, plugin);
