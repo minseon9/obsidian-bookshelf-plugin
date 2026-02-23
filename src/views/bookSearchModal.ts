@@ -307,7 +307,7 @@ export class SearchModal extends Modal {
 		};
 	}
 
-	private async validateBookNotExists(book: Book): Promise<void> {
+	private validateBookNotExists(book: Book): void {
 		const booksFolder = PathManager.getBooksFolderPath(this.plugin.settings.bookFolder);
 		const existingFile = this.bookFileReader.findExisting(booksFolder, book.title);
 		if (existingFile) {
