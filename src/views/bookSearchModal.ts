@@ -38,7 +38,7 @@ export class SearchModal extends Modal {
 		// Search input
 		new Setting(contentEl)
 		.setName('Search query')
-		.setDesc('Enter book title, author or ISBN')
+		.setDesc("Enter book title, author or ISBN")
 			.addText(text => {
 				this.searchInput = text.inputEl;
 				this.searchInput.placeholder = 'Search for books...';
@@ -273,7 +273,7 @@ export class SearchModal extends Modal {
 			this.setButtonsState(true, 'Adding...');
 			const detailedBook = await this.fetchDetailedBookInfo(book);
 			const bookWithStatus = { ...detailedBook, status: this.plugin.settings.defaultStatus };
-			await this.validateBookNotExists(bookWithStatus);
+			this.validateBookNotExists(bookWithStatus);
 			const createdFile = await this.bookFileCreator.create(bookWithStatus, this.plugin.settings.bookFolder);
 			this.showSuccess(`Book "${bookWithStatus.title}" added successfully!`);
 			this.triggerViewRefresh(createdFile);
